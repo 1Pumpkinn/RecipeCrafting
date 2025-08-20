@@ -1,0 +1,5 @@
+name: RecipeCrafting
+version: '1.0-SNAPSHOT'
+main: rc.recipeCrafting.Main
+api-version: '1.21'
+description: Life system
