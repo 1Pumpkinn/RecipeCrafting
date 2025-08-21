@@ -8,8 +8,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.plugin.java.JavaPlugin;
-import rc.recipeCrafting.recipies.CustomRecipe;
-import rc.recipeCrafting.recipies.RecipeManager;
+import rc.recipeCrafting.recipes.CustomRecipe;
+import rc.recipeCrafting.recipes.RecipeManager;
 
 public class CraftingListener implements Listener {
 

@@ -1,4 +1,4 @@
-package rc.recipeCrafting.recipies.impl;
+package rc.recipeCrafting.recipes.impl;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -8,40 +8,39 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.plugin.java.JavaPlugin;
-import rc.recipeCrafting.recipies.CustomRecipe;
+import rc.recipeCrafting.recipes.CustomRecipe;
 
-public class AirmaceRecipe implements CustomRecipe {
+public class FiremaceRecipe implements CustomRecipe {
 
     private final JavaPlugin plugin;
     private final NamespacedKey recipeKey;
     private final ShapedRecipe bukkitRecipe;
 
-    public AirmaceRecipe(JavaPlugin plugin) {
+    public FiremaceRecipe(JavaPlugin plugin) {
         this.plugin = plugin;
-        this.recipeKey = new NamespacedKey(plugin, "airmace_recipe");
+        this.recipeKey = new NamespacedKey(plugin, "firemace_recipe");
         this.bukkitRecipe = createRecipe();
     }
 
     private ShapedRecipe createRecipe() {
-        // Create placeholder item (diamond pickaxe with custom name)
+        // Create placeholder item (mace with custom name)
         ItemStack result = new ItemStack(Material.MACE, 1);
         var meta = result.getItemMeta();
-        meta.setDisplayName("§bAirmace");
+        meta.setDisplayName("§cFiremace Placeholder");
         result.setItemMeta(meta);
 
         // Create the shaped recipe
         ShapedRecipe recipe = new ShapedRecipe(recipeKey, result);
 
-        // Set the pattern
-        recipe.shape("GNG", "PHP", "WBW");
+        // Set the pattern - Fire mace (Image 2: lava bucket, coal block, lava bucket, lava bucket, observer, lava bucket, cobblestone, stick, cobblestone)
+        recipe.shape("LWL", "LHL", "DBD");
 
         // Set the ingredients
-        recipe.setIngredient('G', Material.GHAST_TEAR);
-        recipe.setIngredient('N', Material.NETHER_STAR);
-        recipe.setIngredient('P', Material.PHANTOM_MEMBRANE);
+        recipe.setIngredient('L', Material.LAVA_BUCKET);
+        recipe.setIngredient('W', Material.WITHER_SKELETON_SKULL);
         recipe.setIngredient('H', Material.HEAVY_CORE);
-        recipe.setIngredient('W', Material.WIND_CHARGE);
         recipe.setIngredient('B', Material.BREEZE_ROD);
+        recipe.setIngredient('D', Material.DRIED_GHAST);
 
         return recipe;
     }
@@ -58,16 +57,16 @@ public class AirmaceRecipe implements CustomRecipe {
 
     @Override
     public String getRecipeName() {
-        return "Airmace";
+        return "Firemace";
     }
 
     @Override
     public void onCraft(Player player) {
-        // Execute the airmace command through console
+        // Execute the firemace command through console
         Bukkit.getScheduler().runTask(plugin, () -> {
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "airmace " + player.getName());
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "firemace " + player.getName());
         });
 
-        plugin.getLogger().info("Airmace crafted by " + player.getName());
+        plugin.getLogger().info("Firemace crafted by " + player.getName());
     }
 }

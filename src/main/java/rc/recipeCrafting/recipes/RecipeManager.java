@@ -1,9 +1,10 @@
-package rc.recipeCrafting.recipies;
+package rc.recipeCrafting.recipes;
 
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.plugin.java.JavaPlugin;
-import rc.recipeCrafting.recipies.impl.AirmaceRecipe;
+import rc.recipeCrafting.recipes.CustomRecipe;
+import rc.recipeCrafting.recipes.impl.AirmaceRecipe;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,13 +24,11 @@ public class RecipeManager {
     }
 
     public void registerAllRecipes() {
-        // Register all your custom recipes here
+        // Register all mace recipes
         registerRecipe(new AirmaceRecipe(plugin));
-
-        // Add more recipes here as you create them:
-        // registerRecipe(new FireSwordRecipe(plugin));
-        // registerRecipe(new IceBowRecipe(plugin));
-        // etc.
+        registerRecipe(new rc.recipeCrafting.recipes.impl.FiremaceRecipe(plugin));
+        registerRecipe(new rc.recipeCrafting.recipes.impl.OceanmaceRecipe(plugin));
+        registerRecipe(new rc.recipeCrafting.recipes.impl.EarthmaceRecipe(plugin));
     }
 
     private void registerRecipe(CustomRecipe customRecipe) {

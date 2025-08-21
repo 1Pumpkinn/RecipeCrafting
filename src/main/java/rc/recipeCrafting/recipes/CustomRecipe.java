@@ -1,4 +1,4 @@
-package rc.recipeCrafting.recipies;
+package rc.recipeCrafting.recipes;
 
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;

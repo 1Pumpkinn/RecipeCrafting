@@ -2,16 +2,15 @@ package rc.recipeCrafting;
 
 import org.bukkit.plugin.java.JavaPlugin;
 import rc.recipeCrafting.listeners.CraftingListener;
-import rc.recipeCrafting.recipies.RecipeManager;
 
 public class Main extends JavaPlugin {
 
-    private RecipeManager recipeManager;
+    private rc.recipeCrafting.recipes.RecipeManager recipeManager;
 
     @Override
     public void onEnable() {
         // Initialize recipe manager
-        recipeManager = new RecipeManager(this);
+        recipeManager = new rc.recipeCrafting.recipes.RecipeManager(this);
 
         // Register event listeners
         getServer().getPluginManager().registerEvents(new CraftingListener(this, recipeManager), this);
@@ -31,7 +30,7 @@ public class Main extends JavaPlugin {
         getLogger().info("CustomCrafting plugin disabled!");
     }
 
-    public RecipeManager getRecipeManager() {
+    public rc.recipeCrafting.recipes.RecipeManager getRecipeManager() {
         return recipeManager;
     }
 }
