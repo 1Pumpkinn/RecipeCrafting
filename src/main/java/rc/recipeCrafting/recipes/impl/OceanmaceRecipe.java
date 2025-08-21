@@ -32,15 +32,15 @@ public class OceanmaceRecipe implements CustomRecipe {
         // Create the shaped recipe
         ShapedRecipe recipe = new ShapedRecipe(recipeKey, result);
 
-        // Set the pattern - Ocean mace (Image 3: water bucket, glowstone, water bucket, prismarine, observer, nether wart, trident, stick, trident)
-        recipe.shape("FCF", "WHF", "TBT");
+        // Set the pattern - Ocean mace
+        recipe.shape("FCF", "WHR", "TBT");
 
-        // Set the ingredients
+        // Set the ingredients (fixed duplicate 'F' definitions)
         recipe.setIngredient('F', Material.TROPICAL_FISH_BUCKET);
         recipe.setIngredient('C', Material.CONDUIT);
         recipe.setIngredient('H', Material.HEAVY_CORE);
         recipe.setIngredient('W', Material.TUBE_CORAL);
-        recipe.setIngredient('F', Material.FIRE_CORAL);
+        recipe.setIngredient('R', Material.FIRE_CORAL);
         recipe.setIngredient('T', Material.TRIDENT);
         recipe.setIngredient('B', Material.BREEZE_ROD);
 
