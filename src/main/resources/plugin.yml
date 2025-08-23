@@ -1,5 +1,37 @@
-name: RecipeCrafting
+name: Maces
 version: '1.0-SNAPSHOT'
-main: rc.recipeCrafting.Main
+main: rc.maces.Main
 api-version: '1.21'
-description: Life system
+description: Elemental maces with special abilities
+
+commands:
+  airmace:
+    description: Give a player the Air Mace
+    usage: /<command> <player>
+    permission: airmace.give
+  firemace:
+    description: Give a player the Fire Mace
+    usage: /<command> <player>
+    permission: firemace.give
+  watermace:
+    description: Give a player the Water Mace
+    usage: /<command> <player>
+    permission: watermace.give
+  earthmace:
+    description: Give a player the Earth Mace
+    usage: /<command> <player>
+    permission: earthmace.give
+
+permissions:
+  airmace.give:
+    description: Allows giving Air Maces
+    default: op
+  firemace.give:
+    description: Allows giving Fire Maces
+    default: op
+  watermace.give:
+    description: Allows giving Water Maces
+    default: op
+  earthmace.give:
+    description: Allows giving Earth Maces
+    default: op

@@ -1,4 +1,4 @@
-package rc.recipeCrafting.recipes.impl;
+package rc.maces.recipes.impl;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -8,40 +8,33 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.plugin.java.JavaPlugin;
-import rc.recipeCrafting.recipes.CustomRecipe;
+import rc.maces.recipes.CustomRecipe;
 
-public class WaterMace implements CustomRecipe {
+public class EarthmaceRecipe implements CustomRecipe {
 
     private final JavaPlugin plugin;
     private final NamespacedKey recipeKey;
     private final ShapedRecipe bukkitRecipe;
 
-    public WaterMace(JavaPlugin plugin) {
+    public EarthmaceRecipe(JavaPlugin plugin) {
         this.plugin = plugin;
-        this.recipeKey = new NamespacedKey(plugin, "watermace_recipe");
+        this.recipeKey = new NamespacedKey(plugin, "earthmace_recipe");
         this.bukkitRecipe = createRecipe();
     }
 
     private ShapedRecipe createRecipe() {
-        // Create placeholder item (mace with custom name)
         ItemStack result = new ItemStack(Material.MACE, 1);
         var meta = result.getItemMeta();
-        meta.setDisplayName("§9Water Mace Placeholder");
+        meta.setDisplayName("§aEarthmace Placeholder");
         result.setItemMeta(meta);
 
-        // Create the shaped recipe
         ShapedRecipe recipe = new ShapedRecipe(recipeKey, result);
-
-        // Set the pattern - Water mace
-        recipe.shape("FCF", "WHR", "TBT");
-
-        // Set the ingredients (fixed duplicate 'F' definitions)
-        recipe.setIngredient('F', Material.TROPICAL_FISH_BUCKET);
-        recipe.setIngredient('C', Material.CONDUIT);
+        recipe.shape("MSM", "PHP", "EBE");
+        recipe.setIngredient('M', Material.MOSS_BLOCK);
+        recipe.setIngredient('S', Material.SCULK_CATALYST);
+        recipe.setIngredient('P', Material.PINK_WOOL);
         recipe.setIngredient('H', Material.HEAVY_CORE);
-        recipe.setIngredient('W', Material.TUBE_CORAL);
-        recipe.setIngredient('R', Material.FIRE_CORAL);
-        recipe.setIngredient('T', Material.TRIDENT);
+        recipe.setIngredient('E', Material.DEEPSLATE_EMERALD_ORE);
         recipe.setIngredient('B', Material.BREEZE_ROD);
 
         return recipe;
@@ -59,16 +52,13 @@ public class WaterMace implements CustomRecipe {
 
     @Override
     public String getRecipeName() {
-        return "Watermace";
+        return "Earthmace";
     }
 
     @Override
     public void onCraft(Player player) {
-        // Execute the watermace command through console
         Bukkit.getScheduler().runTask(plugin, () -> {
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "watermace " + player.getName());
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "earthmace " + player.getName());
         });
-
-        plugin.getLogger().info("Water mace crafted by " + player.getName());
     }
 }

@@ -1,4 +1,4 @@
-package rc.recipeCrafting.listeners;
+package rc.maces.listeners;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -8,8 +8,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.plugin.java.JavaPlugin;
-import rc.recipeCrafting.recipes.CustomRecipe;
-import rc.recipeCrafting.recipes.RecipeManager;
+import rc.maces.recipes.CustomRecipe;
+import rc.maces.recipes.RecipeManager;
 
 public class CraftingListener implements Listener {
 
