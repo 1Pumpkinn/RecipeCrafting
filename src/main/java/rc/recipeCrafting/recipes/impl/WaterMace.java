@@ -10,15 +10,15 @@ import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.plugin.java.JavaPlugin;
 import rc.recipeCrafting.recipes.CustomRecipe;
 
-public class OceanmaceRecipe implements CustomRecipe {
+public class WaterMace implements CustomRecipe {
 
     private final JavaPlugin plugin;
     private final NamespacedKey recipeKey;
     private final ShapedRecipe bukkitRecipe;
 
-    public OceanmaceRecipe(JavaPlugin plugin) {
+    public WaterMace(JavaPlugin plugin) {
         this.plugin = plugin;
-        this.recipeKey = new NamespacedKey(plugin, "oceanmace_recipe");
+        this.recipeKey = new NamespacedKey(plugin, "watermace_recipe");
         this.bukkitRecipe = createRecipe();
     }
 
@@ -26,13 +26,13 @@ public class OceanmaceRecipe implements CustomRecipe {
         // Create placeholder item (mace with custom name)
         ItemStack result = new ItemStack(Material.MACE, 1);
         var meta = result.getItemMeta();
-        meta.setDisplayName("§9Oceanmace Placeholder");
+        meta.setDisplayName("§9Water Mace Placeholder");
         result.setItemMeta(meta);
 
         // Create the shaped recipe
         ShapedRecipe recipe = new ShapedRecipe(recipeKey, result);
 
-        // Set the pattern - Ocean mace
+        // Set the pattern - Water mace
         recipe.shape("FCF", "WHR", "TBT");
 
         // Set the ingredients (fixed duplicate 'F' definitions)
@@ -59,16 +59,16 @@ public class OceanmaceRecipe implements CustomRecipe {
 
     @Override
     public String getRecipeName() {
-        return "Oceanmace";
+        return "Watermace";
     }
 
     @Override
     public void onCraft(Player player) {
-        // Execute the oceanmace command through console
+        // Execute the watermace command through console
         Bukkit.getScheduler().runTask(plugin, () -> {
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "oceanmace " + player.getName());
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "watermace " + player.getName());
         });
 
-        plugin.getLogger().info("Oceanmace crafted by " + player.getName());
+        plugin.getLogger().info("Water mace crafted by " + player.getName());
     }
 }

@@ -24,7 +24,7 @@ public class AirmaceRecipe implements CustomRecipe {
 
     private ShapedRecipe createRecipe() {
         // Create placeholder item (diamond pickaxe with custom name)
-        ItemStack result = new ItemStack(Material.DIAMOND_PICKAXE, 1);
+        ItemStack result = new ItemStack(Material.MACE, 1);
         var meta = result.getItemMeta();
         meta.setDisplayName("§bAirmace Placeholder");
         result.setItemMeta(meta);

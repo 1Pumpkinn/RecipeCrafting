@@ -3,8 +3,8 @@ package rc.recipeCrafting.recipes;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.plugin.java.JavaPlugin;
-import rc.recipeCrafting.recipes.CustomRecipe;
 import rc.recipeCrafting.recipes.impl.AirmaceRecipe;
+import rc.recipeCrafting.recipes.impl.WaterMace;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,7 +27,7 @@ public class RecipeManager {
         // Register all mace recipes
         registerRecipe(new AirmaceRecipe(plugin));
         registerRecipe(new rc.recipeCrafting.recipes.impl.FiremaceRecipe(plugin));
-        registerRecipe(new rc.recipeCrafting.recipes.impl.OceanmaceRecipe(plugin));
+        registerRecipe(new WaterMace(plugin));
         registerRecipe(new rc.recipeCrafting.recipes.impl.EarthmaceRecipe(plugin));
     }
 
