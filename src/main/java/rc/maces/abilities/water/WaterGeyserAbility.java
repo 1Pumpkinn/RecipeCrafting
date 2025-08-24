@@ -16,7 +16,7 @@ import rc.maces.managers.CooldownManager;
 
 import java.util.Collection;
 
-// WaterGeyser Ability - Launches nearby living entities upwards
+// WaterGeyser Ability - Launches ALL nearby living entities upwards
 public class WaterGeyserAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -50,7 +50,7 @@ public class WaterGeyserAbility extends BaseAbility {
                     effectLoc.getWorld().spawnParticle(Particle.BUBBLE, effectLoc, 8);
                 }
 
-                // Launch all living entities every 5 ticks
+                // Launch ALL living entities (players and mobs) every 5 ticks
                 if (ticks % 5 == 0) {
                     Collection<Entity> nearby = center.getWorld().getNearbyEntities(center, 3, 3, 3);
                     for (Entity entity : nearby) {

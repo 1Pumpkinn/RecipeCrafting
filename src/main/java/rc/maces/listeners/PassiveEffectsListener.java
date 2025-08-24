@@ -9,7 +9,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
 import rc.maces.managers.ElementManager;
 import rc.maces.managers.MaceManager;
 
@@ -76,7 +75,7 @@ public class PassiveEffectsListener extends BukkitRunnable {
         // Conduit power
         player.addPotionEffect(new PotionEffect(PotionEffectType.CONDUIT_POWER, 40, 0, false, false));
 
-        // FIXED: 5x faster swimming - use Dolphins Grace for swimming speed
+        // 5x faster swimming - use Dolphins Grace for swimming speed
         if (player.isInWater()) {
             player.addPotionEffect(new PotionEffect(PotionEffectType.DOLPHINS_GRACE, 40, 4, false, false));
         }

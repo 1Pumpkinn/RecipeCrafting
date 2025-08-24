@@ -39,11 +39,11 @@ public class MaceListener implements Listener {
         if (maceManager.isAirMace(item)) {
             maceManager.getAbilityManager().executeAbility(player, AbilityManager.WIND_SHOT);
         } else if (maceManager.isFireMace(item)) {
-            maceManager.getAbilityManager().executeAbility(player, AbilityManager.OBSIDIAN_CREATION);
+            // Fire Passthrough removed - no right-click ability for fire mace now
         } else if (maceManager.isWaterMace(item)) {
             maceManager.getAbilityManager().executeAbility(player, AbilityManager.WATER_HEAL);
         } else if (maceManager.isEarthMace(item)) {
-            maceManager.getAbilityManager().executeAbility(player, AbilityManager.BUDDY_UP);
+            maceManager.getAbilityManager().executeAbility(player, AbilityManager.VINE_PULL);
         }
     }
 
@@ -62,6 +62,7 @@ public class MaceListener implements Listener {
             } else if (maceManager.isWaterMace(item)) {
                 maceManager.getAbilityManager().executeAbility(player, AbilityManager.WATER_GEYSER);
             } else if (maceManager.isEarthMace(item)) {
+                // UPDATED: Now uses VinePull instead of Tornado
                 maceManager.getAbilityManager().executeAbility(player, AbilityManager.VINE_PULL);
             }
         }
@@ -73,27 +74,21 @@ public class MaceListener implements Listener {
             Player attacker = (Player) event.getDamager();
             ItemStack weapon = attacker.getInventory().getItemInMainHand();
 
-            // Air Mace: Apply slow falling on hit to all living entities (players only)
-            if (maceManager.isAirMace(weapon) && event.getEntity() instanceof Player) {
-                Player victim = (Player) event.getEntity();
-                victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 40, 0)); // 2 seconds
-            }
-            // Air element role: slow falling on hit even without mace
-            else if ("AIR".equals(elementManager.getPlayerElement(attacker)) && event.getEntity() instanceof Player) {
-                Player victim = (Player) event.getEntity();
-                victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 40, 0)); // 2 seconds
+            // Air Mace or Air element: Apply slow falling on hit to ALL living entities
+            if (event.getEntity() instanceof LivingEntity) {
+                LivingEntity victim = (LivingEntity) event.getEntity();
+
+                if (maceManager.isAirMace(weapon) || "AIR".equals(elementManager.getPlayerElement(attacker))) {
+                    victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 40, 0)); // 2 seconds
+                }
             }
 
-            // Fire Mace: Ignite on hit
-            if (maceManager.isFireMace(weapon)) {
-                event.getEntity().setFireTicks(100); // Ignite victim
-            }
-            // Fire element role: ignite on hit even without mace
-            else if ("FIRE".equals(elementManager.getPlayerElement(attacker))) {
+            // Fire Mace or Fire element: Ignite on hit (ALL living entities)
+            if (maceManager.isFireMace(weapon) || "FIRE".equals(elementManager.getPlayerElement(attacker))) {
                 event.getEntity().setFireTicks(100); // Ignite victim
             }
 
-            // FIXED: Earth Mace golem protection - only trigger when other players attack the earth mace holder
+            // Earth Mace golem protection - only trigger when other players attack the earth mace holder
             if (event.getEntity() instanceof Player) {
                 Player victim = (Player) event.getEntity();
                 ItemStack victimWeapon = victim.getInventory().getItemInMainHand();
@@ -105,7 +100,13 @@ public class MaceListener implements Listener {
             }
         }
 
-        // FIXED: Handle golem protection for any living entity attacking a player (but not the summoner attacking their own golem)
+        // Handle golem damage to prevent attacking summoner
+        if (event.getEntity() instanceof IronGolem) {
+            IronGolem golem = (IronGolem) event.getEntity();
+            BuddyUpAbility.handleGolemDamage(event, golem);
+        }
+
+        // Handle golem protection for any living entity attacking a player (but not the summoner attacking their own golem)
         if (event.getEntity() instanceof Player && event.getDamager() instanceof LivingEntity) {
             Player victim = (Player) event.getEntity();
             LivingEntity damager = (LivingEntity) event.getDamager();
@@ -147,9 +148,9 @@ public class MaceListener implements Listener {
     public void onProjectileHit(ProjectileHitEvent event) {
         Projectile projectile = event.getEntity();
 
-        // FIXED: Wind Charge pulling effect - works on all players (with mace or air element role)
-        if (projectile instanceof WindCharge && event.getHitEntity() instanceof Player) {
-            Player hitPlayer = (Player) event.getHitEntity();
+        // Wind Charge pulling effect - works on ALL living entities (with mace or air element role)
+        if (projectile instanceof WindCharge && event.getHitEntity() instanceof LivingEntity) {
+            LivingEntity hitEntity = (LivingEntity) event.getHitEntity();
             ProjectileSource shooter = projectile.getShooter();
 
             if (shooter instanceof Player) {
@@ -160,16 +161,16 @@ public class MaceListener implements Listener {
                 String shooterElement = elementManager.getPlayerElement(shooterPlayer);
 
                 if (maceManager.isAirMace(mainHand) || "AIR".equals(shooterElement)) {
-                    // Pull the hit player towards the shooter with stronger force
+                    // Pull the hit entity towards the shooter with stronger force
                     Vector direction = shooterPlayer.getLocation().toVector()
-                            .subtract(hitPlayer.getLocation().toVector())
+                            .subtract(hitEntity.getLocation().toVector())
                             .normalize()
-                            .multiply(2.5); // Increased pull force from 2.0 to 2.5
+                            .multiply(2.5); // Stronger pull force
 
                     // Set Y component to prevent getting stuck in ground
                     direction.setY(Math.max(direction.getY(), 0.5));
 
-                    hitPlayer.setVelocity(direction);
+                    hitEntity.setVelocity(direction);
                 }
             }
         }

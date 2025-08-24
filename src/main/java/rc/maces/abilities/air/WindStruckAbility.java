@@ -17,7 +17,7 @@ import rc.maces.managers.CooldownManager;
 
 import java.util.Collection;
 
-// WindStruck Ability - Creates cobwebs and applies slow falling in 5x5 area
+// WindStruck Ability - Creates cobwebs and applies slow falling in 5x5 area to ALL living entities
 public class WindStruckAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -34,13 +34,13 @@ public class WindStruckAbility extends BaseAbility {
         Location center = player.getLocation();
         int affectedTargets = 0;
 
-        // Apply effects to all living entities in 5x5 area
+        // Apply effects to ALL living entities (players and mobs) in 5x5 area
         Collection<Entity> nearbyEntities = center.getWorld().getNearbyEntities(center, 2.5, 2.5, 2.5);
         for (Entity entity : nearbyEntities) {
             if (entity instanceof LivingEntity && entity != player) {
                 LivingEntity target = (LivingEntity) entity;
 
-                // Apply slow falling for 5 seconds
+                // Apply slow falling for 5 seconds to ALL living entities
                 target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 100, 0));
 
                 // Place cobwebs at their location temporarily

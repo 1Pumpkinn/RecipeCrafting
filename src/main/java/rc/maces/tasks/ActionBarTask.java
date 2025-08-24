@@ -41,17 +41,15 @@ public class ActionBarTask extends BukkitRunnable {
                     "Wind Shot", getAbilityStatus(playerId, AbilityManager.WIND_SHOT),
                     "Wind Struck", getAbilityStatus(playerId, AbilityManager.WIND_STRUCK));
         } else if (maceManager.isFireMace(mace)) {
-            actionBar = createActionBar("Fire", NamedTextColor.RED, NamedTextColor.GOLD,
-                    "Obsidian", getAbilityStatus(playerId, AbilityManager.OBSIDIAN_CREATION),
+            actionBar = createSingleAbilityActionBar("Fire", NamedTextColor.RED,
                     "Meteors", getAbilityStatus(playerId, AbilityManager.METEORS));
         } else if (maceManager.isWaterMace(mace)) {
             actionBar = createActionBar("Water", NamedTextColor.DARK_BLUE, NamedTextColor.BLUE,
                     "Water Heal", getAbilityStatus(playerId, AbilityManager.WATER_HEAL),
                     "Water Geyser", getAbilityStatus(playerId, AbilityManager.WATER_GEYSER));
         } else if (maceManager.isEarthMace(mace)) {
-            actionBar = createActionBar("Earth", NamedTextColor.GREEN, NamedTextColor.DARK_GREEN,
-                    "Buddy Up", getAbilityStatus(playerId, AbilityManager.BUDDY_UP),
-                    "Vine Pull", getAbilityStatus(playerId, AbilityManager.VINE_PULL));
+            actionBar = createSingleAbilityActionBar("Earth", NamedTextColor.GREEN,
+                    "Buddy Up", getAbilityStatus(playerId, AbilityManager.BUDDY_UP));
         }
 
         if (actionBar != null) {
@@ -71,6 +69,16 @@ public class ActionBarTask extends BukkitRunnable {
                 .append(Component.text(" | ")
                         .color(NamedTextColor.DARK_GRAY))
                 .append(parseAbilityComponent(ability2Status, ability2Name));
+    }
+
+    private Component createSingleAbilityActionBar(String maceType, NamedTextColor primaryColor,
+                                                   String abilityName, String abilityStatus) {
+        return Component.text(maceType + " Mace")
+                .color(primaryColor)
+                .decoration(TextDecoration.BOLD, true)
+                .append(Component.text(" | ")
+                        .color(NamedTextColor.DARK_GRAY))
+                .append(parseAbilityComponent(abilityStatus, abilityName));
     }
 
     private String getAbilityStatus(UUID playerId, String abilityKey) {

@@ -6,8 +6,8 @@ import rc.maces.abilities.air.WindShotAbility;
 import rc.maces.abilities.air.WindStruckAbility;
 import rc.maces.abilities.earth.BuddyUpAbility;
 import rc.maces.abilities.earth.VinePullAbility;
-import rc.maces.abilities.fire.ObsidianCreationAbility;
 import rc.maces.abilities.fire.MeteorsAbility;
+import rc.maces.abilities.fire.ObsidianCreationAbility;
 import rc.maces.abilities.water.WaterGeyserAbility;
 import rc.maces.abilities.water.WaterHealAbility;
 import rc.maces.managers.CooldownManager;
@@ -26,12 +26,17 @@ public class AbilityManager {
         this.maceManager = maceManager;
 
         // Register all abilities
+
+        //AIR
         registerAbility(new WindShotAbility(cooldownManager));
         registerAbility(new WindStruckAbility(cooldownManager, plugin));
+        //FIRE
         registerAbility(new ObsidianCreationAbility(cooldownManager, plugin));
         registerAbility(new MeteorsAbility(cooldownManager, plugin));
+        //WATER
         registerAbility(new WaterHealAbility(cooldownManager));
         registerAbility(new WaterGeyserAbility(cooldownManager, plugin));
+        //EARTH
         registerAbility(new BuddyUpAbility(cooldownManager, plugin));
         registerAbility(new VinePullAbility(cooldownManager, plugin));
     }
@@ -62,12 +67,17 @@ public class AbilityManager {
     }
 
     // Ability key constants for easier reference
+
+    //WATER
     public static final String WIND_SHOT = "wind_shot";
     public static final String WIND_STRUCK = "wind_struck";
+    //FIRE
     public static final String OBSIDIAN_CREATION = "obsidian_creation";
     public static final String METEORS = "meteors";
+    //WATER
     public static final String WATER_HEAL = "water_heal";
     public static final String WATER_GEYSER = "water_geyser";
+    //EARTH
     public static final String BUDDY_UP = "buddy_up";
     public static final String VINE_PULL = "vine_pull";
 }

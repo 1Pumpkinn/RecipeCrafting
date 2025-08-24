@@ -47,6 +47,8 @@ public class Main extends JavaPlugin {
         getLogger().info("Maces plugin enabled!");
         getLogger().info("Registered " + recipeManager.getRecipeCount() + " custom recipes.");
         getLogger().info("Element system initialized - players will be assigned random elements on join!");
+        getLogger().info("REMOVED: Tornado and Fire Passthrough abilities have been removed!");
+        getLogger().info("All abilities now work on both mobs and players!");
     }
 
     @Override
