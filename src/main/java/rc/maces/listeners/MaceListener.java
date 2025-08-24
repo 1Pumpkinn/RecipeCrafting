@@ -61,9 +61,10 @@ public class MaceListener implements Listener {
             ItemStack weapon = attacker.getInventory().getItemInMainHand();
 
             if (maceManager.isAirMace(weapon) && event.getDamage() > 4) {
-                // Apply slow falling for strong hits
+                // Apply slow falling for strong hits (more than 2 hearts = 4 damage)
                 if (event.getEntity() instanceof LivingEntity) {
                     LivingEntity victim = (LivingEntity) event.getEntity();
+                    // 5 seconds like in Skript
                     victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 100, 0));
                 }
             } else if (maceManager.isFireMace(weapon)) {
@@ -104,12 +105,12 @@ public class MaceListener implements Listener {
             ProjectileSource shooter = projectile.getShooter();
 
             if (shooter instanceof Player) {
-                // Allow wind charges to hit anyone, including the caster
-                // Calculate launch direction
+                // Wind charges can hit anyone, including the caster (like in Skript)
+                // Calculate launch direction from shooter to hit entity
                 Vector direction = hitEntity.getLocation().toVector()
                         .subtract(((Player) shooter).getLocation().toVector())
                         .normalize()
-                        .multiply(3);
+                        .multiply(3); // Force 3 like in Skript
 
                 hitEntity.setVelocity(direction);
             }
@@ -211,17 +212,22 @@ public class MaceListener implements Listener {
     }
 
     private void shootWindChargeCircle(Player player) {
-        Location center = player.getEyeLocation();
+        Location center = player.getEyeLocation().add(0, -0.6, 0); // Body height like in Skript
+        float playerYaw = center.getYaw();
 
+        // Shoot 8 wind charges in circle like Skript function
         for (int i = 0; i < 8; i++) {
-            double angle = i * 45;
-            double radians = Math.toRadians(angle);
+            float angle = playerYaw + (i * 45); // 0, 45, 90, 135, 180, 225, 270, 315 degrees
 
-            Vector direction = new Vector(Math.cos(radians), 0, Math.sin(radians));
+            Location shootLoc = center.clone();
+            shootLoc.setYaw(angle);
+            shootLoc.setPitch(0);
 
-            WindCharge windCharge = player.getWorld().spawn(center, WindCharge.class);
+            Vector direction = shootLoc.getDirection();
+
+            WindCharge windCharge = player.getWorld().spawn(shootLoc, WindCharge.class);
             windCharge.setShooter(player);
-            windCharge.setVelocity(direction.multiply(0.5));
+            windCharge.setVelocity(direction.multiply(0.5)); // Speed 0.5 like in Skript
         }
     }
 
@@ -231,6 +237,7 @@ public class MaceListener implements Listener {
         for (Entity entity : nearby) {
             if (entity instanceof LivingEntity && entity != player) {
                 LivingEntity living = (LivingEntity) entity;
+                // Slowness 2 for 5 seconds like in Skript (level 1 = slowness 2 effect)
                 living.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 100, 1));
             }
         }

@@ -3,19 +3,17 @@ package rc.maces.commands;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import rc.maces.managers.MaceManager;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+
+import java.util.List;
 
 public class AirmaceCommand implements CommandExecutor {
-
-    private final MaceManager maceManager;
-
-    public AirmaceCommand(MaceManager maceManager) {
-        this.maceManager = maceManager;
-    }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -38,11 +36,50 @@ public class AirmaceCommand implements CommandExecutor {
             return true;
         }
 
-        maceManager.giveAirMace(target);
-        sender.sendMessage(Component.text("You have given " + target.getName() + " the Air Mace!")
-                .color(NamedTextColor.LIGHT_PURPLE));
-        target.sendMessage(Component.text("You have been given the Air Mace!")
-                .color(NamedTextColor.LIGHT_PURPLE));
+        // Create Air Mace item
+        ItemStack airMace = new ItemStack(Material.MACE);
+        ItemMeta meta = airMace.getItemMeta();
+
+        // Set name and lore to match Skript version
+        meta.displayName(Component.text("Air Mace")
+                .color(NamedTextColor.WHITE)
+                .decoration(net.kyori.adventure.text.format.TextDecoration.BOLD, true)
+                .append(Component.text(" Mace")
+                        .color(NamedTextColor.GRAY)
+                        .decoration(net.kyori.adventure.text.format.TextDecoration.BOLD, true)));
+
+        meta.lore(List.of(
+                Component.text("💨 Right-click: Wind Shot (5s cooldown)")
+                        .color(NamedTextColor.DARK_GRAY),
+                Component.text("💨 F key: Air Burst (10s cooldown)")
+                        .color(NamedTextColor.DARK_GRAY),
+                Component.text("💨 Grants immunity to fall damage")
+                        .color(NamedTextColor.DARK_GRAY),
+                Component.text("💨 Strong hits apply slow falling")
+                        .color(NamedTextColor.DARK_GRAY)
+        ));
+
+        airMace.setItemMeta(meta);
+
+        // Give item to target
+        target.getInventory().addItem(airMace);
+
+        // Send messages
+        sender.sendMessage(Component.text("You have given " + target.getName() + " the ")
+                .color(NamedTextColor.LIGHT_PURPLE)
+                .append(Component.text("Air Mace")
+                        .color(NamedTextColor.WHITE)
+                        .decoration(net.kyori.adventure.text.format.TextDecoration.BOLD, true))
+                .append(Component.text("!")
+                        .color(NamedTextColor.LIGHT_PURPLE)));
+
+        target.sendMessage(Component.text("You have been given the ")
+                .color(NamedTextColor.LIGHT_PURPLE)
+                .append(Component.text("Air Mace")
+                        .color(NamedTextColor.WHITE)
+                        .decoration(net.kyori.adventure.text.format.TextDecoration.BOLD, true))
+                .append(Component.text("!")
+                        .color(NamedTextColor.LIGHT_PURPLE)));
 
         return true;
     }

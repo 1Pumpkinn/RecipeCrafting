@@ -6,22 +6,23 @@ import java.util.UUID;
 
 public class CooldownManager {
 
-    private final Map<UUID, Map<String, Long>> cooldowns = new HashMap<>();
+    private final Map<String, Long> cooldowns = new HashMap<>();
 
-    public void setCooldown(UUID playerId, String ability, long duration) {
-        cooldowns.computeIfAbsent(playerId, k -> new HashMap<>())
-                .put(ability, System.currentTimeMillis() + duration);
+    public void setCooldown(UUID playerId, String ability, long cooldownMs) {
+        String key = playerId.toString() + ":" + ability;
+        cooldowns.put(key, System.currentTimeMillis() + cooldownMs);
     }
 
     public boolean isOnCooldown(UUID playerId, String ability) {
-        Map<String, Long> playerCooldowns = cooldowns.get(playerId);
-        if (playerCooldowns == null) return false;
+        String key = playerId.toString() + ":" + ability;
+        Long expireTime = cooldowns.get(key);
 
-        Long cooldownEnd = playerCooldowns.get(ability);
-        if (cooldownEnd == null) return false;
+        if (expireTime == null) {
+            return false;
+        }
 
-        if (System.currentTimeMillis() >= cooldownEnd) {
-            playerCooldowns.remove(ability);
+        if (System.currentTimeMillis() >= expireTime) {
+            cooldowns.remove(key);
             return false;
         }
 
@@ -29,24 +30,24 @@ public class CooldownManager {
     }
 
     public long getRemainingCooldown(UUID playerId, String ability) {
-        Map<String, Long> playerCooldowns = cooldowns.get(playerId);
-        if (playerCooldowns == null) return 0;
+        String key = playerId.toString() + ":" + ability;
+        Long expireTime = cooldowns.get(key);
 
-        Long cooldownEnd = playerCooldowns.get(ability);
-        if (cooldownEnd == null) return 0;
+        if (expireTime == null) {
+            return 0;
+        }
 
-        long remaining = cooldownEnd - System.currentTimeMillis();
+        long remaining = expireTime - System.currentTimeMillis();
         return Math.max(0, remaining);
     }
 
-    public void removeCooldown(UUID playerId, String ability) {
-        Map<String, Long> playerCooldowns = cooldowns.get(playerId);
-        if (playerCooldowns != null) {
-            playerCooldowns.remove(ability);
-        }
+    public void clearCooldown(UUID playerId, String ability) {
+        String key = playerId.toString() + ":" + ability;
+        cooldowns.remove(key);
     }
 
     public void clearAllCooldowns(UUID playerId) {
-        cooldowns.remove(playerId);
+        String playerPrefix = playerId.toString() + ":";
+        cooldowns.entrySet().removeIf(entry -> entry.getKey().startsWith(playerPrefix));
     }
 }
