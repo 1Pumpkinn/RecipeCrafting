@@ -103,7 +103,8 @@ public class MaceListener implements Listener {
             Entity hitEntity = event.getHitEntity();
             ProjectileSource shooter = projectile.getShooter();
 
-            if (shooter instanceof Player && hitEntity != shooter) {
+            if (shooter instanceof Player) {
+                // Allow wind charges to hit anyone, including the caster
                 // Calculate launch direction
                 Vector direction = hitEntity.getLocation().toVector()
                         .subtract(((Player) shooter).getLocation().toVector())
@@ -370,7 +371,7 @@ public class MaceListener implements Listener {
                     Collection<Entity> nearby = center.getWorld().getNearbyEntities(center, 3, 3, 3);
                     for (Entity entity : nearby) {
                         if (entity != player) {
-                            entity.setVelocity(new Vector(0, 1.5, 0));
+                            entity.setVelocity(new Vector(0, 4.0, 0)); // Increased from 1.5 to 4.0 for ~40 block height
                         }
                     }
                 }
@@ -388,11 +389,11 @@ public class MaceListener implements Listener {
         Location center = player.getLocation();
         Vector direction = player.getEyeLocation().getDirection().normalize();
 
-        // Create a 5x3 stone wall in front of player
+        // Create a larger 9x5 stone wall in front of player (increased from 5x3)
         Vector right = direction.clone().crossProduct(new Vector(0, 1, 0));
 
-        for (int x = -2; x <= 2; x++) {
-            for (int y = 0; y < 3; y++) {
+        for (int x = -4; x <= 4; x++) { // Changed from -2 to 2, now -4 to 4
+            for (int y = 0; y < 5; y++) { // Changed from 3 to 5
                 Location wallLoc = center.clone()
                         .add(direction.clone().multiply(2))
                         .add(right.clone().multiply(x))
@@ -413,7 +414,7 @@ public class MaceListener implements Listener {
             }
         }
 
-        player.sendMessage(Component.text("🌍 STONE WALL! Created protective barrier!")
+        player.sendMessage(Component.text("🌍 STONE WALL! Created massive protective barrier!")
                 .color(NamedTextColor.GREEN));
         center.getWorld().playSound(center, Sound.BLOCK_STONE_PLACE, 2.0f, 0.8f);
     }
@@ -436,13 +437,19 @@ public class MaceListener implements Listener {
                     return;
                 }
 
-                // Create random stone spikes in 15x15 area
-                if (ticks % 10 == 0) {
+                // Create random stone spikes in 15x15 area (faster - every 5 ticks instead of 10)
+                if (ticks % 5 == 0) {
                     for (int i = 0; i < 5; i++) {
                         int randomX = random.nextInt(15) - 7;
                         int randomZ = random.nextInt(15) - 7;
 
                         Location spikeLoc = center.clone().add(randomX, 0, randomZ);
+
+                        // Don't create spikes directly under the player to prevent suffocation
+                        if (spikeLoc.distance(center) < 2) {
+                            continue;
+                        }
+
                         int height = random.nextInt(3) + 2;
 
                         for (int y = 1; y <= height; y++) {
