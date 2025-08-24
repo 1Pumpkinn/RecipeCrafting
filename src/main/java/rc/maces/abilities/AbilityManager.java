@@ -5,8 +5,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 import rc.maces.abilities.air.WindShotAbility;
 import rc.maces.abilities.air.WindStruckAbility;
 import rc.maces.abilities.earth.BuddyUpAbility;
-import rc.maces.abilities.earth.TornadoAbility;
-import rc.maces.abilities.fire.FirePassthroughAbility;
+import rc.maces.abilities.earth.VinePullAbility;
+import rc.maces.abilities.fire.ObsidianCreationAbility;
 import rc.maces.abilities.fire.MeteorsAbility;
 import rc.maces.abilities.water.WaterGeyserAbility;
 import rc.maces.abilities.water.WaterHealAbility;
@@ -28,12 +28,12 @@ public class AbilityManager {
         // Register all abilities
         registerAbility(new WindShotAbility(cooldownManager));
         registerAbility(new WindStruckAbility(cooldownManager, plugin));
-        registerAbility(new FirePassthroughAbility(cooldownManager, plugin));
+        registerAbility(new ObsidianCreationAbility(cooldownManager, plugin));
         registerAbility(new MeteorsAbility(cooldownManager, plugin));
         registerAbility(new WaterHealAbility(cooldownManager));
         registerAbility(new WaterGeyserAbility(cooldownManager, plugin));
         registerAbility(new BuddyUpAbility(cooldownManager, plugin));
-        registerAbility(new TornadoAbility(cooldownManager, plugin));
+        registerAbility(new VinePullAbility(cooldownManager, plugin));
     }
 
     private void registerAbility(BaseAbility ability) {
@@ -64,10 +64,10 @@ public class AbilityManager {
     // Ability key constants for easier reference
     public static final String WIND_SHOT = "wind_shot";
     public static final String WIND_STRUCK = "wind_struck";
-    public static final String FIRE_PASSTHROUGH = "fire_passthrough";
+    public static final String OBSIDIAN_CREATION = "obsidian_creation";
     public static final String METEORS = "meteors";
     public static final String WATER_HEAL = "water_heal";
     public static final String WATER_GEYSER = "water_geyser";
     public static final String BUDDY_UP = "buddy_up";
-    public static final String TORNADO = "tornado";
+    public static final String VINE_PULL = "vine_pull";
 }

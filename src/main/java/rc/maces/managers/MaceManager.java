@@ -185,7 +185,7 @@ public class MaceManager {
             appendAbilityStatus(sb, player, AbilityManager.WIND_STRUCK, "Wind Struck", "§7");
         } else if (isFireMace(mainHand)) {
             sb.append("§c§lFire §6§lMace §8| ");
-            appendAbilityStatus(sb, player, AbilityManager.FIRE_PASSTHROUGH, "Fire Pass", "§c");
+            appendAbilityStatus(sb, player, AbilityManager.OBSIDIAN_CREATION, "Obsidian", "§c");
             sb.append(" §8| ");
             appendAbilityStatus(sb, player, AbilityManager.METEORS, "Meteors", "§6");
         } else if (isWaterMace(mainHand)) {
@@ -197,7 +197,7 @@ public class MaceManager {
             sb.append("§2§lEarth §a§lMace §8| ");
             appendAbilityStatus(sb, player, AbilityManager.BUDDY_UP, "Buddy Up", "§2");
             sb.append(" §8| ");
-            appendAbilityStatus(sb, player, AbilityManager.TORNADO, "Tornado", "§a");
+            appendAbilityStatus(sb, player, AbilityManager.VINE_PULL, "Vine Pull", "§a");
         }
 
         return sb.toString();

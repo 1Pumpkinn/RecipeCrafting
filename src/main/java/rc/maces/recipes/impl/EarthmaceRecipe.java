@@ -25,7 +25,7 @@ public class EarthmaceRecipe implements CustomRecipe {
     private ShapedRecipe createRecipe() {
         ItemStack result = new ItemStack(Material.MACE, 1);
         var meta = result.getItemMeta();
-        meta.setDisplayName("§aEarthmace Placeholder");
+        meta.setDisplayName("§aEarth Mace");
         result.setItemMeta(meta);
 
         ShapedRecipe recipe = new ShapedRecipe(recipeKey, result);

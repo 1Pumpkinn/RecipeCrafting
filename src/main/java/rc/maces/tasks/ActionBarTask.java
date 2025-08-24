@@ -42,7 +42,7 @@ public class ActionBarTask extends BukkitRunnable {
                     "Wind Struck", getAbilityStatus(playerId, AbilityManager.WIND_STRUCK));
         } else if (maceManager.isFireMace(mace)) {
             actionBar = createActionBar("Fire", NamedTextColor.RED, NamedTextColor.GOLD,
-                    "Fire Pass", getAbilityStatus(playerId, AbilityManager.FIRE_PASSTHROUGH),
+                    "Obsidian", getAbilityStatus(playerId, AbilityManager.OBSIDIAN_CREATION),
                     "Meteors", getAbilityStatus(playerId, AbilityManager.METEORS));
         } else if (maceManager.isWaterMace(mace)) {
             actionBar = createActionBar("Water", NamedTextColor.DARK_BLUE, NamedTextColor.BLUE,
@@ -51,7 +51,7 @@ public class ActionBarTask extends BukkitRunnable {
         } else if (maceManager.isEarthMace(mace)) {
             actionBar = createActionBar("Earth", NamedTextColor.GREEN, NamedTextColor.DARK_GREEN,
                     "Buddy Up", getAbilityStatus(playerId, AbilityManager.BUDDY_UP),
-                    "Tornado", getAbilityStatus(playerId, AbilityManager.TORNADO));
+                    "Vine Pull", getAbilityStatus(playerId, AbilityManager.VINE_PULL));
         }
 
         if (actionBar != null) {

@@ -23,7 +23,7 @@ commands:
     permission: earthmace.give
   element:
     description: Manage player elements
-    usage: /<command> <check|set> [player] [element]
+    usage: /<command> <check|set|info> [player] [element]
     permission: element.admin
   reroll:
     description: Reroll your element or another player's element
@@ -49,7 +49,7 @@ permissions:
     default: op
   element.reroll:
     description: Allows rerolling your own element
-    default: true
+    default: op
   element.reroll.others:
     description: Allows rerolling other players' elements
     default: op

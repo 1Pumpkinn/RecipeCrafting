@@ -34,7 +34,7 @@ public class FiremaceRecipe implements CustomRecipe {
         recipe.setIngredient('W', Material.WITHER_SKELETON_SKULL);
         recipe.setIngredient('H', Material.HEAVY_CORE);
         recipe.setIngredient('B', Material.BREEZE_ROD);
-        recipe.setIngredient('D', Material.MAGMA_BLOCK); // Using magma block instead of dried_ghast
+        recipe.setIngredient('D', Material.DRIED_GHAST);
 
         return recipe;
     }

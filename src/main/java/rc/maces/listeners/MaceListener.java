@@ -16,7 +16,6 @@ import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.util.Vector;
 import rc.maces.abilities.AbilityManager;
 import rc.maces.abilities.earth.BuddyUpAbility;
-import rc.maces.abilities.fire.FirePassthroughAbility;
 import rc.maces.managers.ElementManager;
 import rc.maces.managers.MaceManager;
 
@@ -40,7 +39,7 @@ public class MaceListener implements Listener {
         if (maceManager.isAirMace(item)) {
             maceManager.getAbilityManager().executeAbility(player, AbilityManager.WIND_SHOT);
         } else if (maceManager.isFireMace(item)) {
-            maceManager.getAbilityManager().executeAbility(player, AbilityManager.FIRE_PASSTHROUGH);
+            maceManager.getAbilityManager().executeAbility(player, AbilityManager.OBSIDIAN_CREATION);
         } else if (maceManager.isWaterMace(item)) {
             maceManager.getAbilityManager().executeAbility(player, AbilityManager.WATER_HEAL);
         } else if (maceManager.isEarthMace(item)) {
@@ -63,7 +62,7 @@ public class MaceListener implements Listener {
             } else if (maceManager.isWaterMace(item)) {
                 maceManager.getAbilityManager().executeAbility(player, AbilityManager.WATER_GEYSER);
             } else if (maceManager.isEarthMace(item)) {
-                maceManager.getAbilityManager().executeAbility(player, AbilityManager.TORNADO);
+                maceManager.getAbilityManager().executeAbility(player, AbilityManager.VINE_PULL);
             }
         }
     }
@@ -88,16 +87,6 @@ public class MaceListener implements Listener {
             // Fire Mace: Ignite on hit
             if (maceManager.isFireMace(weapon)) {
                 event.getEntity().setFireTicks(100); // Ignite victim
-
-                // Handle fire passthrough true damage for all living entities
-                if (FirePassthroughAbility.hasFirePassthrough(attacker) &&
-                        event.getEntity() instanceof LivingEntity) {
-                    LivingEntity victim = (LivingEntity) event.getEntity();
-                    // Convert to true damage
-                    event.setCancelled(true);
-                    double newHealth = Math.max(0, victim.getHealth() - event.getFinalDamage());
-                    victim.setHealth(newHealth);
-                }
             }
             // Fire element role: ignite on hit even without mace
             else if ("FIRE".equals(elementManager.getPlayerElement(attacker))) {
