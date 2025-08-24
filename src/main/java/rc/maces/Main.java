@@ -5,6 +5,7 @@ import rc.maces.commands.*;
 import rc.maces.listeners.*;
 import rc.maces.managers.*;
 import rc.maces.recipes.RecipeManager;
+import rc.maces.tasks.ActionBarTask;
 
 public class Main extends JavaPlugin {
 
