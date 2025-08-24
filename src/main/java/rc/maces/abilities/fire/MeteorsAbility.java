@@ -86,7 +86,7 @@ public class MeteorsAbility extends BaseAbility {
         targetLoc.getWorld().spawnParticle(Particle.EXPLOSION, targetLoc, 20);
         targetLoc.getWorld().spawnParticle(Particle.FLAME, targetLoc, 15);
 
-        // Deal 2 hearts (4 damage) true damage to nearby entities
+        // Deal 2 hearts (4 damage) true damage to nearby living entities
         Collection<Entity> nearby = targetLoc.getWorld().getNearbyEntities(targetLoc, 2, 2, 2);
         for (Entity entity : nearby) {
             if (entity instanceof LivingEntity && entity != caster) {
@@ -98,6 +98,7 @@ public class MeteorsAbility extends BaseAbility {
 
                 entity.setFireTicks(100);
 
+                // Send message only to players
                 if (entity instanceof Player) {
                     ((Player) entity).sendMessage(Component.text("☄️ STRUCK BY METEOR!")
                             .color(NamedTextColor.RED));

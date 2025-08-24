@@ -71,7 +71,7 @@ public class MaceListener implements Listener {
             Player attacker = (Player) event.getDamager();
             ItemStack weapon = attacker.getInventory().getItemInMainHand();
 
-            // Air Mace: Apply slow falling on hit
+            // Air Mace: Apply slow falling on hit to all living entities
             if (maceManager.isAirMace(weapon) && event.getEntity() instanceof LivingEntity) {
                 LivingEntity victim = (LivingEntity) event.getEntity();
                 victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 40, 0)); // 2 seconds
@@ -86,7 +86,7 @@ public class MaceListener implements Listener {
                     event.setDamage(event.getDamage() + 4.0); // +2 hearts
                 }
 
-                // Handle fire passthrough true damage
+                // Handle fire passthrough true damage for all living entities
                 if (FirePassthroughAbility.hasFirePassthrough(attacker) &&
                         event.getEntity() instanceof LivingEntity) {
                     LivingEntity victim = (LivingEntity) event.getEntity();
@@ -97,10 +97,15 @@ public class MaceListener implements Listener {
                 }
             }
 
-            // Earth Mace: Trigger golem protection
+            // Earth Mace: Trigger golem protection when player is attacked
             else if (maceManager.isEarthMace(weapon) && event.getEntity() instanceof Player) {
                 BuddyUpAbility.handlePlayerDamage(event, (Player) event.getEntity());
             }
+        }
+
+        // Handle golem protection for any living entity attacking a player
+        if (event.getEntity() instanceof Player && event.getDamager() instanceof LivingEntity) {
+            BuddyUpAbility.handlePlayerDamage(event, (Player) event.getEntity());
         }
     }
 
@@ -131,21 +136,21 @@ public class MaceListener implements Listener {
     public void onProjectileHit(ProjectileHitEvent event) {
         Projectile projectile = event.getEntity();
 
-        // Wind Charge pulling effect
-        if (projectile instanceof WindCharge && event.getHitEntity() instanceof Player) {
-            Player hitPlayer = (Player) event.getHitEntity();
+        // Wind Charge pulling effect - now works on all living entities
+        if (projectile instanceof WindCharge && event.getHitEntity() instanceof LivingEntity) {
+            LivingEntity hitEntity = (LivingEntity) event.getHitEntity();
             ProjectileSource shooter = projectile.getShooter();
 
             if (shooter instanceof Player) {
                 Player shooterPlayer = (Player) shooter;
 
-                // Pull the hit player towards the shooter
+                // Pull the hit entity towards the shooter
                 Vector direction = shooterPlayer.getLocation().toVector()
-                        .subtract(hitPlayer.getLocation().toVector())
+                        .subtract(hitEntity.getLocation().toVector())
                         .normalize()
                         .multiply(2.0);
 
-                hitPlayer.setVelocity(direction);
+                hitEntity.setVelocity(direction);
             }
         }
     }

@@ -8,7 +8,6 @@ import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
 import rc.maces.abilities.BaseAbility;
 import rc.maces.managers.CooldownManager;
 
@@ -67,11 +66,12 @@ public class BuddyUpAbility extends BaseAbility {
         }
     }
 
+    // Handle when the player gets damaged by any living entity
     public static void handlePlayerDamage(EntityDamageByEntityEvent event, Player victim) {
         IronGolem golem = playerGolems.get(victim.getUniqueId());
-        if (golem != null && !golem.isDead() && event.getDamager() instanceof Player) {
-            Player attacker = (Player) event.getDamager();
-            // Make golem target the attacker
+        if (golem != null && !golem.isDead() && event.getDamager() instanceof LivingEntity) {
+            LivingEntity attacker = (LivingEntity) event.getDamager();
+            // Make golem target the attacker (works on all living entities)
             golem.setTarget(attacker);
         }
     }

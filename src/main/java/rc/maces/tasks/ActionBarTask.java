@@ -8,6 +8,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
+import rc.maces.abilities.AbilityManager;
 import rc.maces.managers.MaceManager;
 
 import java.util.UUID;
@@ -37,20 +38,20 @@ public class ActionBarTask extends BukkitRunnable {
 
         if (maceManager.isAirMace(mace)) {
             actionBar = createActionBar("Air", NamedTextColor.WHITE, NamedTextColor.GRAY,
-                    "Wind Shot", getAbilityStatus(playerId, "wind_shot"),
-                    "Air Burst", getAbilityStatus(playerId, "air_burst"));
+                    "Wind Shot", getAbilityStatus(playerId, AbilityManager.WIND_SHOT),
+                    "Wind Struck", getAbilityStatus(playerId, AbilityManager.WIND_STRUCK));
         } else if (maceManager.isFireMace(mace)) {
             actionBar = createActionBar("Fire", NamedTextColor.RED, NamedTextColor.GOLD,
-                    "Water to Lava", getAbilityStatus(playerId, "water_to_lava"),
-                    "Meteor Shower", getAbilityStatus(playerId, "meteor_shower"));
+                    "Fire Pass", getAbilityStatus(playerId, AbilityManager.FIRE_PASSTHROUGH),
+                    "Meteors", getAbilityStatus(playerId, AbilityManager.METEORS));
         } else if (maceManager.isWaterMace(mace)) {
             actionBar = createActionBar("Water", NamedTextColor.DARK_BLUE, NamedTextColor.BLUE,
-                    "Self Heal", getAbilityStatus(playerId, "self_heal"),
-                    "Water Geyser", getAbilityStatus(playerId, "water_geyser"));
+                    "Water Heal", getAbilityStatus(playerId, AbilityManager.WATER_HEAL),
+                    "Water Geyser", getAbilityStatus(playerId, AbilityManager.WATER_GEYSER));
         } else if (maceManager.isEarthMace(mace)) {
             actionBar = createActionBar("Earth", NamedTextColor.GREEN, NamedTextColor.DARK_GREEN,
-                    "Stone Wall", getAbilityStatus(playerId, "stone_wall"),
-                    "Earthquake", getAbilityStatus(playerId, "earthquake"));
+                    "Buddy Up", getAbilityStatus(playerId, AbilityManager.BUDDY_UP),
+                    "Tornado", getAbilityStatus(playerId, AbilityManager.TORNADO));
         }
 
         if (actionBar != null) {

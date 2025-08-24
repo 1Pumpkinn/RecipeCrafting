@@ -5,6 +5,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -14,7 +15,7 @@ import rc.maces.managers.CooldownManager;
 
 import java.util.Collection;
 
-// Tornado Ability - Pulls all players in 5x5 radius towards you
+// Tornado Ability - Pulls all living entities in 5x5 radius towards you
 public class TornadoAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -40,12 +41,12 @@ public class TornadoAbility extends BaseAbility {
                     return;
                 }
 
-                // Pull players towards center every 5 ticks
+                // Pull all living entities towards center every 5 ticks
                 if (ticks % 5 == 0) {
                     Collection<Entity> nearby = center.getWorld().getNearbyEntities(center, 2.5, 2.5, 2.5);
                     for (Entity entity : nearby) {
-                        if (entity instanceof Player && entity != player) {
-                            Player target = (Player) entity;
+                        if (entity instanceof LivingEntity && entity != player) {
+                            LivingEntity target = (LivingEntity) entity;
 
                             // Calculate direction towards center
                             Vector direction = center.toVector()
@@ -55,8 +56,11 @@ public class TornadoAbility extends BaseAbility {
 
                             target.setVelocity(direction);
 
-                            target.sendMessage(Component.text("🌪️ Pulled by tornado force!")
-                                    .color(NamedTextColor.GOLD));
+                            // Send message only to players
+                            if (target instanceof Player) {
+                                ((Player) target).sendMessage(Component.text("🌪️ Pulled by tornado force!")
+                                        .color(NamedTextColor.GOLD));
+                            }
                         }
                     }
                 }

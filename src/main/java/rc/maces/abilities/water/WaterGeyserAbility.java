@@ -6,6 +6,7 @@ import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -15,7 +16,7 @@ import rc.maces.managers.CooldownManager;
 
 import java.util.Collection;
 
-// WaterGeyser Ability - Launches nearby players upwards
+// WaterGeyser Ability - Launches nearby living entities upwards
 public class WaterGeyserAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -49,14 +50,19 @@ public class WaterGeyserAbility extends BaseAbility {
                     effectLoc.getWorld().spawnParticle(Particle.BUBBLE, effectLoc, 8);
                 }
 
-                // Launch players every 5 ticks
+                // Launch all living entities every 5 ticks
                 if (ticks % 5 == 0) {
                     Collection<Entity> nearby = center.getWorld().getNearbyEntities(center, 3, 3, 3);
                     for (Entity entity : nearby) {
-                        if (entity instanceof Player && entity != player) {
-                            entity.setVelocity(new Vector(0, 3.0, 0));
-                            ((Player) entity).sendMessage(Component.text("🌊 Launched by Water Geyser!")
-                                    .color(NamedTextColor.BLUE));
+                        if (entity instanceof LivingEntity && entity != player) {
+                            LivingEntity target = (LivingEntity) entity;
+                            target.setVelocity(new Vector(0, 3.0, 0));
+
+                            // Send message only to players
+                            if (target instanceof Player) {
+                                ((Player) target).sendMessage(Component.text("🌊 Launched by Water Geyser!")
+                                        .color(NamedTextColor.BLUE));
+                            }
                         }
                     }
                 }
