@@ -2,7 +2,7 @@ name: RecipeCrating
 version: '2.0-SNAPSHOT'
 main: rc.maces.Main
 api-version: '1.21'
-description: Elemental maces with special abilities and optimized structure
+description: Elemental maces with special abilities, element roles, and optimized structure
 
 commands:
   airmace:
@@ -21,6 +21,10 @@ commands:
     description: Give a player the Earth Mace
     usage: /<command> <player>
     permission: earthmace.give
+  element:
+    description: Manage player elements
+    usage: /<command> <check|set> [player] [element]
+    permission: element.admin
 
 permissions:
   airmace.give:
@@ -34,4 +38,7 @@ permissions:
     default: op
   earthmace.give:
     description: Allows giving Earth Maces
+    default: op
+  element.admin:
+    description: Allows managing player elements
     default: op

@@ -17,14 +17,17 @@ import org.bukkit.util.Vector;
 import rc.maces.abilities.AbilityManager;
 import rc.maces.abilities.earth.BuddyUpAbility;
 import rc.maces.abilities.fire.FirePassthroughAbility;
+import rc.maces.managers.ElementManager;
 import rc.maces.managers.MaceManager;
 
 public class MaceListener implements Listener {
 
     private final MaceManager maceManager;
+    private final ElementManager elementManager;
 
-    public MaceListener(MaceManager maceManager) {
+    public MaceListener(MaceManager maceManager, ElementManager elementManager) {
         this.maceManager = maceManager;
+        this.elementManager = elementManager;
     }
 
     @EventHandler
@@ -71,20 +74,20 @@ public class MaceListener implements Listener {
             Player attacker = (Player) event.getDamager();
             ItemStack weapon = attacker.getInventory().getItemInMainHand();
 
-            // Air Mace: Apply slow falling on hit to all living entities
-            if (maceManager.isAirMace(weapon) && event.getEntity() instanceof LivingEntity) {
-                LivingEntity victim = (LivingEntity) event.getEntity();
+            // Air Mace: Apply slow falling on hit to all living entities (players only)
+            if (maceManager.isAirMace(weapon) && event.getEntity() instanceof Player) {
+                Player victim = (Player) event.getEntity();
+                victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 40, 0)); // 2 seconds
+            }
+            // Air element role: slow falling on hit even without mace
+            else if ("AIR".equals(elementManager.getPlayerElement(attacker)) && event.getEntity() instanceof Player) {
+                Player victim = (Player) event.getEntity();
                 victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 40, 0)); // 2 seconds
             }
 
-            // Fire Mace: Ignite on hit + bonus damage when on fire
-            else if (maceManager.isFireMace(weapon)) {
-                event.getEntity().setFireTicks(100);
-
-                // Bonus damage when attacker is on fire
-                if (attacker.getFireTicks() > 0) {
-                    event.setDamage(event.getDamage() + 4.0); // +2 hearts
-                }
+            // Fire Mace: Ignite on hit
+            if (maceManager.isFireMace(weapon)) {
+                event.getEntity().setFireTicks(100); // Ignite victim
 
                 // Handle fire passthrough true damage for all living entities
                 if (FirePassthroughAbility.hasFirePassthrough(attacker) &&
@@ -96,9 +99,13 @@ public class MaceListener implements Listener {
                     victim.setHealth(newHealth);
                 }
             }
+            // Fire element role: ignite on hit even without mace
+            else if ("FIRE".equals(elementManager.getPlayerElement(attacker))) {
+                event.getEntity().setFireTicks(100); // Ignite victim
+            }
 
             // Earth Mace: Trigger golem protection when player is attacked
-            else if (maceManager.isEarthMace(weapon) && event.getEntity() instanceof Player) {
+            if (maceManager.isEarthMace(weapon) && event.getEntity() instanceof Player) {
                 BuddyUpAbility.handlePlayerDamage(event, (Player) event.getEntity());
             }
         }
@@ -116,14 +123,15 @@ public class MaceListener implements Listener {
         Player player = (Player) event.getEntity();
         ItemStack mainHand = player.getInventory().getItemInMainHand();
         ItemStack offHand = player.getInventory().getItemInOffHand();
+        String playerElement = elementManager.getPlayerElement(player);
 
-        // Air Mace: Fall damage immunity
+        // Air Mace: Fall damage immunity (holding mace or air element role)
         if (event.getCause() == EntityDamageEvent.DamageCause.FALL &&
-                (maceManager.isAirMace(mainHand) || maceManager.isAirMace(offHand))) {
+                (maceManager.isAirMace(mainHand) || maceManager.isAirMace(offHand) || "AIR".equals(playerElement))) {
             event.setCancelled(true);
         }
 
-        // Fire Mace: Fire immunity
+        // Fire Mace: Fire immunity (only when holding mace)
         if ((event.getCause() == EntityDamageEvent.DamageCause.FIRE ||
                 event.getCause() == EntityDamageEvent.DamageCause.FIRE_TICK ||
                 event.getCause() == EntityDamageEvent.DamageCause.LAVA) &&
@@ -136,21 +144,27 @@ public class MaceListener implements Listener {
     public void onProjectileHit(ProjectileHitEvent event) {
         Projectile projectile = event.getEntity();
 
-        // Wind Charge pulling effect - now works on all living entities
-        if (projectile instanceof WindCharge && event.getHitEntity() instanceof LivingEntity) {
-            LivingEntity hitEntity = (LivingEntity) event.getHitEntity();
+        // Wind Charge pulling effect - works on all players (with mace or air element role)
+        if (projectile instanceof WindCharge && event.getHitEntity() instanceof Player) {
+            Player hitPlayer = (Player) event.getHitEntity();
             ProjectileSource shooter = projectile.getShooter();
 
             if (shooter instanceof Player) {
                 Player shooterPlayer = (Player) shooter;
 
-                // Pull the hit entity towards the shooter
-                Vector direction = shooterPlayer.getLocation().toVector()
-                        .subtract(hitEntity.getLocation().toVector())
-                        .normalize()
-                        .multiply(2.0);
+                // Check if shooter has air mace or air element
+                ItemStack mainHand = shooterPlayer.getInventory().getItemInMainHand();
+                String shooterElement = elementManager.getPlayerElement(shooterPlayer);
 
-                hitEntity.setVelocity(direction);
+                if (maceManager.isAirMace(mainHand) || "AIR".equals(shooterElement)) {
+                    // Pull the hit player towards the shooter
+                    Vector direction = shooterPlayer.getLocation().toVector()
+                            .subtract(hitPlayer.getLocation().toVector())
+                            .normalize()
+                            .multiply(2.0);
+
+                    hitPlayer.setVelocity(direction);
+                }
             }
         }
     }
@@ -161,7 +175,7 @@ public class MaceListener implements Listener {
         ItemStack mainHand = player.getInventory().getItemInMainHand();
         ItemStack offHand = player.getInventory().getItemInOffHand();
 
-        // Earth Mace: All food acts like golden apples
+        // Earth Mace: All food acts like golden apples (only when holding mace)
         if (maceManager.isEarthMace(mainHand) || maceManager.isEarthMace(offHand)) {
             // Apply golden apple effects (Regeneration II for 5 seconds, Absorption for 2 minutes)
             player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 1));

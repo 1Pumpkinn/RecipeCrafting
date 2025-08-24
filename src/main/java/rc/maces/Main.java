@@ -10,6 +10,7 @@ import rc.maces.tasks.ActionBarTask;
 public class Main extends JavaPlugin {
 
     private CooldownManager cooldownManager;
+    private ElementManager elementManager;
     private MaceManager maceManager;
     private RecipeManager recipeManager;
 
@@ -17,6 +18,7 @@ public class Main extends JavaPlugin {
     public void onEnable() {
         // Initialize managers
         cooldownManager = new CooldownManager();
+        elementManager = new ElementManager(this);
         maceManager = new MaceManager(this, cooldownManager);
         recipeManager = new RecipeManager(this);
 
@@ -25,10 +27,12 @@ public class Main extends JavaPlugin {
         getCommand("firemace").setExecutor(new FiremaceCommand(maceManager));
         getCommand("watermace").setExecutor(new WatermaceCommand(maceManager));
         getCommand("earthmace").setExecutor(new EarthmaceCommand(maceManager));
+        getCommand("element").setExecutor(new ElementCommand(elementManager));
 
         // Register event listeners
-        getServer().getPluginManager().registerEvents(new MaceListener(maceManager), this);
-        getServer().getPluginManager().registerEvents(new CraftingListener(this, recipeManager), this);
+        getServer().getPluginManager().registerEvents(new MaceListener(maceManager, elementManager), this);
+        getServer().getPluginManager().registerEvents(new CraftingListener(this, recipeManager, elementManager), this);
+        getServer().getPluginManager().registerEvents(new PlayerJoinListener(elementManager), this);
 
         // Register recipes
         recipeManager.registerAllRecipes();
@@ -37,10 +41,11 @@ public class Main extends JavaPlugin {
         new ActionBarTask(maceManager).runTaskTimer(this, 0L, 1L);
 
         // Start passive effects task
-        new PassiveEffectsListener(maceManager).runTaskTimer(this, 0L, 20L); // Every second
+        new PassiveEffectsListener(maceManager, elementManager).runTaskTimer(this, 0L, 20L); // Every second
 
         getLogger().info("Maces plugin enabled!");
         getLogger().info("Registered " + recipeManager.getRecipeCount() + " custom recipes.");
+        getLogger().info("Element system initialized - players will be assigned random elements on join!");
     }
 
     @Override
@@ -48,11 +53,18 @@ public class Main extends JavaPlugin {
         if (recipeManager != null) {
             recipeManager.unregisterAllRecipes();
         }
+        if (elementManager != null) {
+            elementManager.saveAllData();
+        }
         getLogger().info("Maces plugin disabled!");
     }
 
     public CooldownManager getCooldownManager() {
         return cooldownManager;
+    }
+
+    public ElementManager getElementManager() {
+        return elementManager;
     }
 
     public MaceManager getMaceManager() {
