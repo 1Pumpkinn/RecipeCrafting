@@ -25,6 +25,11 @@ commands:
     description: Manage player elements
     usage: /<command> <check|set> [player] [element]
     permission: element.admin
+  reroll:
+    description: Reroll your element or another player's element
+    usage: /<command> [player]
+    permission: element.reroll
+    aliases: [elementreroll, rollnew]
 
 permissions:
   airmace.give:
@@ -41,4 +46,10 @@ permissions:
     default: op
   element.admin:
     description: Allows managing player elements
+    default: op
+  element.reroll:
+    description: Allows rerolling your own element
+    default: true
+  element.reroll.others:
+    description: Allows rerolling other players' elements
     default: op

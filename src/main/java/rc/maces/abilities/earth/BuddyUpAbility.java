@@ -13,11 +13,12 @@ import rc.maces.managers.CooldownManager;
 
 import java.util.*;
 
-// BuddyUp Ability - Summons a protective iron golem
+// FIXED BuddyUp Ability - Summons a protective iron golem that won't attack summoner
 public class BuddyUpAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
     private static final Map<UUID, IronGolem> playerGolems = new HashMap<>();
+    private static final Set<UUID> golemUUIDs = new HashSet<>(); // Track golem UUIDs to prevent summoner attacks
 
     public BuddyUpAbility(CooldownManager cooldownManager, JavaPlugin plugin) {
         super("buddy_up", 15, cooldownManager);
@@ -42,7 +43,9 @@ public class BuddyUpAbility extends BaseAbility {
         golem.setCustomName("§a" + player.getName() + "'s Buddy");
         golem.setCustomNameVisible(true);
 
+        // FIXED: Store both the golem reference and its UUID to track it
         playerGolems.put(player.getUniqueId(), golem);
+        golemUUIDs.add(golem.getUniqueId());
 
         player.sendMessage(Component.text("🤖 BUDDY UP! Your iron golem protector has arrived!")
                 .color(NamedTextColor.GREEN));
@@ -62,17 +65,41 @@ public class BuddyUpAbility extends BaseAbility {
     private void removeExistingGolem(Player player) {
         IronGolem existingGolem = playerGolems.remove(player.getUniqueId());
         if (existingGolem != null && !existingGolem.isDead()) {
+            golemUUIDs.remove(existingGolem.getUniqueId()); // Remove from tracking set
             existingGolem.remove();
         }
     }
 
-    // Handle when the player gets damaged by any living entity
+    // FIXED: Handle when the player gets damaged by any living entity, but prevent golem from attacking summoner
     public static void handlePlayerDamage(EntityDamageByEntityEvent event, Player victim) {
         IronGolem golem = playerGolems.get(victim.getUniqueId());
         if (golem != null && !golem.isDead() && event.getDamager() instanceof LivingEntity) {
             LivingEntity attacker = (LivingEntity) event.getDamager();
-            // Make golem target the attacker (works on all living entities)
+
+            // FIXED: Don't make golem attack its own summoner
+            if (attacker instanceof Player && attacker.equals(victim)) {
+                return; // Don't target the summoner
+            }
+
+            // FIXED: Don't make golem attack other golems (prevent golem wars)
+            if (attacker instanceof IronGolem && golemUUIDs.contains(attacker.getUniqueId())) {
+                return;
+            }
+
+            // Make golem target the attacker (works on all living entities except summoner)
             golem.setTarget(attacker);
         }
+    }
+
+    // Clean up method to be called when golems die naturally
+    public static void cleanupGolem(IronGolem golem) {
+        UUID golemUUID = golem.getUniqueId();
+        golemUUIDs.remove(golemUUID);
+
+        // Find and remove from playerGolems map
+        playerGolems.entrySet().removeIf(entry -> {
+            IronGolem playerGolem = entry.getValue();
+            return playerGolem != null && playerGolem.getUniqueId().equals(golemUUID);
+        });
     }
 }

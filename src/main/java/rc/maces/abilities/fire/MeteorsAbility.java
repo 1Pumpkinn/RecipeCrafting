@@ -18,7 +18,7 @@ import rc.maces.managers.CooldownManager;
 import java.util.Collection;
 import java.util.Random;
 
-// Meteors Ability - Drops 10 meteors in 5x5 radius
+// BUFFED Meteors Ability - Drops 15 meteors in 7x7 radius with increased damage
 public class MeteorsAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -44,27 +44,28 @@ public class MeteorsAbility extends BaseAbility {
 
             @Override
             public void run() {
-                if (meteorsLaunched >= 10) {
+                if (meteorsLaunched >= 15) { // BUFFED: Increased from 10 to 15 meteors
                     cancel();
                     return;
                 }
 
-                // Random location in 5x5 radius
-                int randomX = random.nextInt(5) - 2;
-                int randomZ = random.nextInt(5) - 2;
+                // BUFFED: Random location in 7x7 radius (increased from 5x5)
+                int randomX = random.nextInt(7) - 3;
+                int randomZ = random.nextInt(7) - 3;
 
                 Location targetLoc = center.clone().add(randomX, 0, randomZ);
-                Location meteorLoc = targetLoc.clone().add(0, 15, 0);
+                Location meteorLoc = targetLoc.clone().add(0, 20, 0); // BUFFED: Higher drop from 20 blocks
 
-                // Create warning effects
-                targetLoc.getWorld().spawnParticle(Particle.FLAME, targetLoc, 10);
-                targetLoc.getWorld().spawnParticle(Particle.LAVA, targetLoc, 5);
+                // Create warning effects - MORE INTENSE
+                targetLoc.getWorld().spawnParticle(Particle.FLAME, targetLoc, 20); // Doubled particles
+                targetLoc.getWorld().spawnParticle(Particle.LAVA, targetLoc, 10); // Doubled particles
+                targetLoc.getWorld().spawnParticle(Particle.SMOKE, targetLoc, 15); // Added smoke
 
-                // Launch meteor
+                // Launch meteor with higher speed
                 LargeFireball meteor = meteorLoc.getWorld().spawn(meteorLoc, LargeFireball.class);
                 meteor.setShooter(player);
                 meteor.setDirection(new Vector(0, -1, 0));
-                meteor.setVelocity(new Vector(0, -2, 0));
+                meteor.setVelocity(new Vector(0, -2.5, 0)); // BUFFED: Faster fall speed
 
                 // Schedule impact
                 new BukkitRunnable() {
@@ -72,37 +73,33 @@ public class MeteorsAbility extends BaseAbility {
                     public void run() {
                         meteorImpact(targetLoc, player);
                     }
-                }.runTaskLater(plugin, 15L);
+                }.runTaskLater(plugin, 12L); // Faster impact due to higher speed
 
                 meteorsLaunched++;
             }
-        }.runTaskTimer(plugin, 0L, 3L);
+        }.runTaskTimer(plugin, 0L, 2L); // BUFFED: Faster meteor spawning (every 2 ticks instead of 3)
 
         setCooldown(player);
     }
 
     private void meteorImpact(Location targetLoc, Player caster) {
-        targetLoc.getWorld().playSound(targetLoc, Sound.ENTITY_GENERIC_EXPLODE, 2.0f, 0.5f);
-        targetLoc.getWorld().spawnParticle(Particle.EXPLOSION, targetLoc, 20);
-        targetLoc.getWorld().spawnParticle(Particle.FLAME, targetLoc, 15);
+        targetLoc.getWorld().playSound(targetLoc, Sound.ENTITY_GENERIC_EXPLODE, 2.5f, 0.4f); // Louder sound
+        targetLoc.getWorld().spawnParticle(Particle.EXPLOSION, targetLoc, 30); // More particles
+        targetLoc.getWorld().spawnParticle(Particle.FLAME, targetLoc, 25); // More flames
+        targetLoc.getWorld().spawnParticle(Particle.LAVA, targetLoc, 10); // Added lava particles
 
-        // Deal 2 hearts (4 damage) true damage to nearby living entities
-        Collection<Entity> nearby = targetLoc.getWorld().getNearbyEntities(targetLoc, 2, 2, 2);
+        // BUFFED: Deal 3 hearts (6 damage) true damage to nearby living entities in larger radius
+        Collection<Entity> nearby = targetLoc.getWorld().getNearbyEntities(targetLoc, 3, 3, 3); // Increased radius from 2 to 3
         for (Entity entity : nearby) {
             if (entity instanceof LivingEntity && entity != caster) {
                 LivingEntity living = (LivingEntity) entity;
 
-                // True damage - bypass armor/resistance
-                double newHealth = Math.max(0, living.getHealth() - 4.0);
+                // BUFFED: True damage - bypass armor/resistance (increased from 4 to 6 damage)
+                double newHealth = Math.max(0, living.getHealth() - 6.0);
                 living.setHealth(newHealth);
 
-                entity.setFireTicks(100);
-
-                // Send message only to players
-                if (entity instanceof Player) {
-                    ((Player) entity).sendMessage(Component.text("☄️ STRUCK BY METEOR!")
-                            .color(NamedTextColor.RED));
-                }
+                // BUFFED: Longer fire duration
+                entity.setFireTicks(150); // Increased from 100 to 150 ticks
             }
         }
     }

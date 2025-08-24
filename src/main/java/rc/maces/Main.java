@@ -28,6 +28,7 @@ public class Main extends JavaPlugin {
         getCommand("watermace").setExecutor(new WatermaceCommand(maceManager));
         getCommand("earthmace").setExecutor(new EarthmaceCommand(maceManager));
         getCommand("element").setExecutor(new ElementCommand(elementManager));
+        getCommand("reroll").setExecutor(new RerollCommand(elementManager));
 
         // Register event listeners
         getServer().getPluginManager().registerEvents(new MaceListener(maceManager, elementManager), this);

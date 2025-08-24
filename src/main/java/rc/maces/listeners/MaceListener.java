@@ -104,15 +104,29 @@ public class MaceListener implements Listener {
                 event.getEntity().setFireTicks(100); // Ignite victim
             }
 
-            // Earth Mace: Trigger golem protection when player is attacked
-            if (maceManager.isEarthMace(weapon) && event.getEntity() instanceof Player) {
-                BuddyUpAbility.handlePlayerDamage(event, (Player) event.getEntity());
+            // FIXED: Earth Mace golem protection - only trigger when other players attack the earth mace holder
+            if (event.getEntity() instanceof Player) {
+                Player victim = (Player) event.getEntity();
+                ItemStack victimWeapon = victim.getInventory().getItemInMainHand();
+
+                // Only trigger golem protection if the victim has earth mace and attacker is different player
+                if (maceManager.isEarthMace(victimWeapon) && !attacker.equals(victim)) {
+                    BuddyUpAbility.handlePlayerDamage(event, victim);
+                }
             }
         }
 
-        // Handle golem protection for any living entity attacking a player
+        // FIXED: Handle golem protection for any living entity attacking a player (but not the summoner attacking their own golem)
         if (event.getEntity() instanceof Player && event.getDamager() instanceof LivingEntity) {
-            BuddyUpAbility.handlePlayerDamage(event, (Player) event.getEntity());
+            Player victim = (Player) event.getEntity();
+            LivingEntity damager = (LivingEntity) event.getDamager();
+
+            // Don't trigger if the victim is attacking their own golem
+            if (!(damager instanceof IronGolem &&
+                    damager.getCustomName() != null &&
+                    damager.getCustomName().contains(victim.getName()))) {
+                BuddyUpAbility.handlePlayerDamage(event, victim);
+            }
         }
     }
 
@@ -144,7 +158,7 @@ public class MaceListener implements Listener {
     public void onProjectileHit(ProjectileHitEvent event) {
         Projectile projectile = event.getEntity();
 
-        // Wind Charge pulling effect - works on all players (with mace or air element role)
+        // FIXED: Wind Charge pulling effect - works on all players (with mace or air element role)
         if (projectile instanceof WindCharge && event.getHitEntity() instanceof Player) {
             Player hitPlayer = (Player) event.getHitEntity();
             ProjectileSource shooter = projectile.getShooter();
@@ -157,11 +171,14 @@ public class MaceListener implements Listener {
                 String shooterElement = elementManager.getPlayerElement(shooterPlayer);
 
                 if (maceManager.isAirMace(mainHand) || "AIR".equals(shooterElement)) {
-                    // Pull the hit player towards the shooter
+                    // Pull the hit player towards the shooter with stronger force
                     Vector direction = shooterPlayer.getLocation().toVector()
                             .subtract(hitPlayer.getLocation().toVector())
                             .normalize()
-                            .multiply(2.0);
+                            .multiply(2.5); // Increased pull force from 2.0 to 2.5
+
+                    // Set Y component to prevent getting stuck in ground
+                    direction.setY(Math.max(direction.getY(), 0.5));
 
                     hitPlayer.setVelocity(direction);
                 }

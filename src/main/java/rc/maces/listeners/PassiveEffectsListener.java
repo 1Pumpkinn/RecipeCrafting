@@ -76,14 +76,9 @@ public class PassiveEffectsListener extends BukkitRunnable {
         // Conduit power
         player.addPotionEffect(new PotionEffect(PotionEffectType.CONDUIT_POWER, 40, 0, false, false));
 
-        // 5x faster swimming - use velocity manipulation instead of speed
+        // FIXED: 5x faster swimming - use Dolphins Grace for swimming speed
         if (player.isInWater()) {
-            Vector velocity = player.getVelocity();
-            // Only boost horizontal movement when swimming
-            if (Math.abs(velocity.getX()) > 0.01 || Math.abs(velocity.getZ()) > 0.01) {
-                velocity.multiply(new Vector(1.5, 1.0, 1.5)); // Boost horizontal speed
-                player.setVelocity(velocity);
-            }
+            player.addPotionEffect(new PotionEffect(PotionEffectType.DOLPHINS_GRACE, 40, 4, false, false));
         }
 
         // Drown nearby living entities (including mobs) in 4x4 area
