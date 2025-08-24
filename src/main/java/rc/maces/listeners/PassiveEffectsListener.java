@@ -2,6 +2,7 @@ package rc.maces.listeners;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -25,48 +26,73 @@ public class PassiveEffectsListener extends BukkitRunnable {
     public void run() {
         for (Player player : Bukkit.getOnlinePlayers()) {
             ItemStack mainHand = player.getInventory().getItemInMainHand();
+            ItemStack offHand = player.getInventory().getItemInOffHand();
 
-            if (maceManager.isFireMace(mainHand)) {
-                // Fire resistance for Fire Mace holders
-                player.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 40, 0, false, false));
+            // Check if player has any custom mace in either hand
+            boolean hasFireMace = maceManager.isFireMace(mainHand) || maceManager.isFireMace(offHand);
+            boolean hasWaterMace = maceManager.isWaterMace(mainHand) || maceManager.isWaterMace(offHand);
+            boolean hasEarthMace = maceManager.isEarthMace(mainHand) || maceManager.isEarthMace(offHand);
 
-            } else if (maceManager.isWaterMace(mainHand)) {
-                // Conduit Power and Dolphin's Grace for Water Mace holders
-                player.addPotionEffect(new PotionEffect(PotionEffectType.CONDUIT_POWER, 40, 0, false, false));
-                player.addPotionEffect(new PotionEffect(PotionEffectType.DOLPHINS_GRACE, 40, 0, false, false));
+            if (hasFireMace) {
+                applyFireMacePassives(player);
+            }
 
-                // Drown nearby enemies (apply water breathing removal effect)
-                Collection<Entity> nearby = player.getWorld().getNearbyEntities(player.getLocation(), 4, 4, 4);
-                for (Entity entity : nearby) {
-                    if (entity instanceof LivingEntity && entity != player) {
-                        LivingEntity living = (LivingEntity) entity;
+            if (hasWaterMace) {
+                applyWaterMacePassives(player);
+            }
 
-                        // Check if entity is underwater or in water
-                        if (living.getLocation().getBlock().getType() == Material.WATER ||
-                                living.getEyeLocation().getBlock().getType() == Material.WATER) {
+            if (hasEarthMace) {
+                applyEarthMacePassives(player);
+            }
+        }
+    }
 
-                            // Remove water breathing and cause drowning damage
-                            living.removePotionEffect(PotionEffectType.WATER_BREATHING);
-                            if (living.getRemainingAir() > 0) {
-                                living.setRemainingAir(Math.max(0, living.getRemainingAir() - 20));
-                            }
-                        }
+    private void applyFireMacePassives(Player player) {
+        // Fire resistance
+        player.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 40, 0, false, false));
+    }
+
+    private void applyWaterMacePassives(Player player) {
+        // Conduit power
+        player.addPotionEffect(new PotionEffect(PotionEffectType.CONDUIT_POWER, 40, 0, false, false));
+
+        // 5x faster swimming (custom water speed boost)
+        if (player.isInWater()) {
+            // Apply a very strong speed effect when in water
+            player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 40, 4, false, false));
+        }
+
+        // Drown nearby players in 4x4 area
+        Collection<Entity> nearby = player.getWorld().getNearbyEntities(player.getLocation(), 2, 2, 2);
+        for (Entity entity : nearby) {
+            if (entity instanceof Player && entity != player) {
+                Player target = (Player) entity;
+
+                // Check if target is in water
+                if (target.getLocation().getBlock().getType() == Material.WATER ||
+                        target.getEyeLocation().getBlock().getType() == Material.WATER) {
+
+                    // Remove water breathing and reduce air
+                    target.removePotionEffect(PotionEffectType.WATER_BREATHING);
+                    if (target.getRemainingAir() > 0) {
+                        target.setRemainingAir(Math.max(0, target.getRemainingAir() - 40)); // Faster drowning
                     }
                 }
+            }
+        }
+    }
 
-            } else if (maceManager.isEarthMace(mainHand)) {
-                // Stone Skin effect (resistance) for Earth Mace holders
-                player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 40, 1, false, false));
+    private void applyEarthMacePassives(Player player) {
+        // Haste 5 (level 4 in code = Haste 5 in game)
+        player.addPotionEffect(new PotionEffect(PotionEffectType.HASTE, 40, 4, false, false));
 
-                // Check for suffocation immunity
-                if (player.getLocation().getBlock().getType().isSolid()) {
-                    // Teleport player to safe location above
-                    for (int y = 1; y <= 10; y++) {
-                        if (!player.getLocation().clone().add(0, y, 0).getBlock().getType().isSolid()) {
-                            player.teleport(player.getLocation().clone().add(0, y, 0));
-                            break;
-                        }
-                    }
+        // Check for suffocation immunity
+        if (player.getLocation().getBlock().getType().isSolid()) {
+            // Teleport player to safe location above
+            for (int y = 1; y <= 10; y++) {
+                if (!player.getLocation().clone().add(0, y, 0).getBlock().getType().isSolid()) {
+                    player.teleport(player.getLocation().clone().add(0, y, 0));
+                    break;
                 }
             }
         }

@@ -1,8 +1,8 @@
-name: Maces
-version: '1.0-SNAPSHOT'
+name: RecipeCrating
+version: '2.0-SNAPSHOT'
 main: rc.maces.Main
 api-version: '1.21'
-description: Elemental maces with special abilities
+description: Elemental maces with special abilities and optimized structure
 
 commands:
   airmace:

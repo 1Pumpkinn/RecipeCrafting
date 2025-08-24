@@ -8,6 +8,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
+import rc.maces.abilities.AbilityManager;
 
 import java.util.Arrays;
 import java.util.UUID;
@@ -16,10 +17,12 @@ public class MaceManager {
 
     private final JavaPlugin plugin;
     private final CooldownManager cooldownManager;
+    private final AbilityManager abilityManager;
 
     public MaceManager(JavaPlugin plugin, CooldownManager cooldownManager) {
         this.plugin = plugin;
         this.cooldownManager = cooldownManager;
+        this.abilityManager = new AbilityManager(plugin, cooldownManager, this);
     }
 
     public ItemStack createAirMace() {
@@ -33,11 +36,13 @@ public class MaceManager {
         meta.lore(Arrays.asList(
                 Component.text("💨 Right-click: Wind Shot (5s cooldown)")
                         .color(NamedTextColor.DARK_GRAY),
-                Component.text("💨 F key: Air Burst (10s cooldown)")
+                Component.text("💨 F key: Wind Struck (20s cooldown)")
                         .color(NamedTextColor.DARK_GRAY),
-                Component.text("💨 Grants immunity to fall damage")
+                Component.text("💨 Passive: No fall damage")
                         .color(NamedTextColor.DARK_GRAY),
-                Component.text("💨 Strong hits apply slow falling")
+                Component.text("💨 Passive: Hit gives slow falling")
+                        .color(NamedTextColor.DARK_GRAY),
+                Component.text("💨 Passive: Wind charges pull players")
                         .color(NamedTextColor.DARK_GRAY)
         ));
 
@@ -54,13 +59,15 @@ public class MaceManager {
                 .decoration(TextDecoration.BOLD, true));
 
         meta.lore(Arrays.asList(
-                Component.text("🔥 Right-click: Water to Lava (10s cooldown)")
+                Component.text("🔥 Right-click: Fire Passthrough (10s cooldown)")
                         .color(NamedTextColor.DARK_GRAY),
-                Component.text("🔥 F key: Meteor Shower (25s cooldown)")
-                        .color(NamedTextColor.DARK_GRAY),
-                Component.text("🔥 Passive: Ignite enemies on hit")
+                Component.text("🔥 F key: Meteors (25s cooldown)")
                         .color(NamedTextColor.DARK_GRAY),
                 Component.text("🔥 Passive: Fire immunity")
+                        .color(NamedTextColor.DARK_GRAY),
+                Component.text("🔥 Passive: +2 attack damage when on fire")
+                        .color(NamedTextColor.DARK_GRAY),
+                Component.text("🔥 Passive: Ignite enemies on hit")
                         .color(NamedTextColor.DARK_GRAY)
         ));
 
@@ -77,13 +84,15 @@ public class MaceManager {
                 .decoration(TextDecoration.BOLD, true));
 
         meta.lore(Arrays.asList(
-                Component.text("🌊 Right-click: Self Heal +2❤ (10s cooldown)")
+                Component.text("🌊 Right-click: Water Heal +2❤ (10s cooldown)")
                         .color(NamedTextColor.DARK_GRAY),
-                Component.text("🌊 F key: Water Geyser (20s cooldown)")
+                Component.text("🌊 F key: Water Geyser (30s cooldown)")
                         .color(NamedTextColor.DARK_GRAY),
-                Component.text("🌊 Passive: Conduit Power & Dolphin's Grace")
+                Component.text("🌊 Passive: Nearby players drown 4x4")
                         .color(NamedTextColor.DARK_GRAY),
-                Component.text("🌊 Passive: Enemies within 4 blocks drown")
+                Component.text("🌊 Passive: 5x faster in water")
+                        .color(NamedTextColor.DARK_GRAY),
+                Component.text("🌊 Passive: Conduit Power")
                         .color(NamedTextColor.DARK_GRAY)
         ));
 
@@ -100,13 +109,13 @@ public class MaceManager {
                 .decoration(TextDecoration.BOLD, true));
 
         meta.lore(Arrays.asList(
-                Component.text("🌍 Right-click: Stone Wall (15s cooldown)")
+                Component.text("🌍 Right-click: Buddy Up (15s cooldown)")
                         .color(NamedTextColor.DARK_GRAY),
-                Component.text("🌍 F key: Earthquake (30s cooldown)")
+                Component.text("🌍 F key: Tornado (20s cooldown)")
                         .color(NamedTextColor.DARK_GRAY),
-                Component.text("🌍 Passive: Stone Skin effect")
+                Component.text("🌍 Passive: Haste 5")
                         .color(NamedTextColor.DARK_GRAY),
-                Component.text("🌍 Passive: Immunity to suffocation")
+                Component.text("🌍 Passive: All food = golden apples")
                         .color(NamedTextColor.DARK_GRAY)
         ));
 
@@ -171,91 +180,44 @@ public class MaceManager {
 
         if (isAirMace(mainHand)) {
             sb.append("§f§lAir §7§lMace §8| ");
-
-            // Wind Shot status
-            if (cooldownManager.isOnCooldown(playerId, "wind_shot")) {
-                long remaining = cooldownManager.getRemainingCooldown(playerId, "wind_shot") / 1000;
-                sb.append("§c§fWind Shot: ").append(remaining).append("s");
-            } else {
-                sb.append("§a§fWind Shot: Ready");
-            }
-
+            appendAbilityStatus(sb, player, AbilityManager.WIND_SHOT, "Wind Shot", "§f");
             sb.append(" §8| ");
-
-            // Air Burst status
-            if (cooldownManager.isOnCooldown(playerId, "air_burst")) {
-                long remaining = cooldownManager.getRemainingCooldown(playerId, "air_burst") / 1000;
-                sb.append("§c§7Air Burst: ").append(remaining).append("s");
-            } else {
-                sb.append("§a§7Air Burst: Ready");
-            }
+            appendAbilityStatus(sb, player, AbilityManager.WIND_STRUCK, "Wind Struck", "§7");
         } else if (isFireMace(mainHand)) {
             sb.append("§c§lFire §6§lMace §8| ");
-
-            // Water to Lava status
-            if (cooldownManager.isOnCooldown(playerId, "water_to_lava")) {
-                long remaining = cooldownManager.getRemainingCooldown(playerId, "water_to_lava") / 1000;
-                sb.append("§c§cWater to Lava: ").append(remaining).append("s");
-            } else {
-                sb.append("§a§cWater to Lava: Ready");
-            }
-
+            appendAbilityStatus(sb, player, AbilityManager.FIRE_PASSTHROUGH, "Fire Pass", "§c");
             sb.append(" §8| ");
-
-            // Meteor Shower status
-            if (cooldownManager.isOnCooldown(playerId, "meteor_shower")) {
-                long remaining = cooldownManager.getRemainingCooldown(playerId, "meteor_shower") / 1000;
-                sb.append("§c§6Meteor Shower: ").append(remaining).append("s");
-            } else {
-                sb.append("§a§6Meteor Shower: Ready");
-            }
+            appendAbilityStatus(sb, player, AbilityManager.METEORS, "Meteors", "§6");
         } else if (isWaterMace(mainHand)) {
             sb.append("§1§lWater §9§lMace §8| ");
-
-            // Self Heal status
-            if (cooldownManager.isOnCooldown(playerId, "self_heal")) {
-                long remaining = cooldownManager.getRemainingCooldown(playerId, "self_heal") / 1000;
-                sb.append("§c§9Self Heal: ").append(remaining).append("s");
-            } else {
-                sb.append("§a§9Self Heal: Ready");
-            }
-
+            appendAbilityStatus(sb, player, AbilityManager.WATER_HEAL, "Water Heal", "§9");
             sb.append(" §8| ");
-
-            // Water Geyser status
-            if (cooldownManager.isOnCooldown(playerId, "water_geyser")) {
-                long remaining = cooldownManager.getRemainingCooldown(playerId, "water_geyser") / 1000;
-                sb.append("§c§1Water Geyser: ").append(remaining).append("s");
-            } else {
-                sb.append("§a§1Water Geyser: Ready");
-            }
+            appendAbilityStatus(sb, player, AbilityManager.WATER_GEYSER, "Water Geyser", "§1");
         } else if (isEarthMace(mainHand)) {
             sb.append("§2§lEarth §a§lMace §8| ");
-
-            // Stone Wall status
-            if (cooldownManager.isOnCooldown(playerId, "stone_wall")) {
-                long remaining = cooldownManager.getRemainingCooldown(playerId, "stone_wall") / 1000;
-                sb.append("§c§2Stone Wall: ").append(remaining).append("s");
-            } else {
-                sb.append("§a§2Stone Wall: Ready");
-            }
-
+            appendAbilityStatus(sb, player, AbilityManager.BUDDY_UP, "Buddy Up", "§2");
             sb.append(" §8| ");
-
-            // Earthquake status
-            if (cooldownManager.isOnCooldown(playerId, "earthquake")) {
-                long remaining = cooldownManager.getRemainingCooldown(playerId, "earthquake") / 1000;
-                sb.append("§c§aEarthquake: ").append(remaining).append("s");
-            } else {
-                sb.append("§a§aEarthquake: Ready");
-            }
+            appendAbilityStatus(sb, player, AbilityManager.TORNADO, "Tornado", "§a");
         }
 
         return sb.toString();
     }
 
+    private void appendAbilityStatus(StringBuilder sb, Player player, String abilityKey, String abilityName, String color) {
+        if (abilityManager.canUseAbility(player, abilityKey)) {
+            sb.append("§a").append(color).append(abilityName).append(": Ready");
+        } else {
+            long remaining = abilityManager.getRemainingCooldown(player, abilityKey) / 1000;
+            sb.append("§c").append(color).append(abilityName).append(": ").append(remaining).append("s");
+        }
+    }
+
     public CooldownManager getCooldownManager() {
         return cooldownManager;
+    }
+
+    public AbilityManager getAbilityManager() {
+        return abilityManager;
     }
 
     public JavaPlugin getPlugin() {
