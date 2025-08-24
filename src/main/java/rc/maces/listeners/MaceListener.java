@@ -230,14 +230,14 @@ public class MaceListener implements Listener {
             windCharge.setVelocity(direction.multiply(0.5)); // Speed 0.5 like in Skript
         }
 
-        // Apply knockback to all nearby entities (including the shooter) immediately
+        // Apply knockback to all nearby entities (excluding the shooter) immediately
         // This works around Minecraft's projectile-shooter collision immunity
         new BukkitRunnable() {
             @Override
             public void run() {
                 Collection<Entity> nearby = center.getWorld().getNearbyEntities(center, 8, 8, 8);
                 for (Entity entity : nearby) {
-                    if (entity instanceof LivingEntity) {
+                    if (entity instanceof LivingEntity && entity != player) {
                         // Calculate direction from center to entity
                         Vector direction = entity.getLocation().toVector()
                                 .subtract(center.toVector())

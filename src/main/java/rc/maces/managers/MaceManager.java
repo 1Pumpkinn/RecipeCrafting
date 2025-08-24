@@ -28,10 +28,7 @@ public class MaceManager {
 
         meta.displayName(Component.text("Air Mace")
                 .color(NamedTextColor.WHITE)
-                .decoration(TextDecoration.BOLD, true)
-                .append(Component.text(" Mace")
-                        .color(NamedTextColor.GRAY)
-                        .decoration(TextDecoration.BOLD, true)));
+                .decoration(TextDecoration.BOLD, true));
 
         meta.lore(Arrays.asList(
                 Component.text("💨 Right-click: Wind Shot (5s cooldown)")
@@ -54,10 +51,7 @@ public class MaceManager {
 
         meta.displayName(Component.text("Fire Mace")
                 .color(NamedTextColor.RED)
-                .decoration(TextDecoration.BOLD, true)
-                .append(Component.text(" Mace")
-                        .color(NamedTextColor.GOLD)
-                        .decoration(TextDecoration.BOLD, true)));
+                .decoration(TextDecoration.BOLD, true));
 
         meta.lore(Arrays.asList(
                 Component.text("🔥 Right-click: Water to Lava (10s cooldown)")
@@ -80,10 +74,7 @@ public class MaceManager {
 
         meta.displayName(Component.text("Water Mace")
                 .color(NamedTextColor.DARK_BLUE)
-                .decoration(TextDecoration.BOLD, true)
-                .append(Component.text(" Mace")
-                        .color(NamedTextColor.BLUE)
-                        .decoration(TextDecoration.BOLD, true)));
+                .decoration(TextDecoration.BOLD, true));
 
         meta.lore(Arrays.asList(
                 Component.text("🌊 Right-click: Self Heal +2❤ (10s cooldown)")
@@ -106,10 +97,7 @@ public class MaceManager {
 
         meta.displayName(Component.text("Earth Mace")
                 .color(NamedTextColor.GREEN)
-                .decoration(TextDecoration.BOLD, true)
-                .append(Component.text(" Mace")
-                        .color(NamedTextColor.DARK_GREEN)
-                        .decoration(TextDecoration.BOLD, true)));
+                .decoration(TextDecoration.BOLD, true));
 
         meta.lore(Arrays.asList(
                 Component.text("🌍 Right-click: Stone Wall (15s cooldown)")
