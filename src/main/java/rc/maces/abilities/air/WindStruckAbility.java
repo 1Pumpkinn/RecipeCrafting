@@ -23,7 +23,7 @@ public class WindStruckAbility extends BaseAbility {
     private final JavaPlugin plugin;
 
     public WindStruckAbility(CooldownManager cooldownManager, JavaPlugin plugin) {
-        super("wind_struck", 20, cooldownManager);
+        super("wind_struck", 25, cooldownManager);
         this.plugin = plugin;
     }
 
@@ -43,21 +43,8 @@ public class WindStruckAbility extends BaseAbility {
                 // Apply slow falling for 5 seconds to ALL living entities
                 target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 100, 0));
 
-                // Place cobwebs at their location temporarily
-                Location targetLoc = target.getLocation();
-                if (targetLoc.getBlock().getType() == Material.AIR) {
-                    targetLoc.getBlock().setType(Material.COBWEB);
-
-                    // Remove cobweb after 3 seconds
-                    new BukkitRunnable() {
-                        @Override
-                        public void run() {
-                            if (targetLoc.getBlock().getType() == Material.COBWEB) {
-                                targetLoc.getBlock().setType(Material.AIR);
-                            }
-                        }
-                    }.runTaskLater(plugin, 60L);
-                }
+                // Apply slow falling for 5 seconds to ALL living entities
+                target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 100, 0));
 
                 // Send message only to players
                 if (target instanceof Player) {
@@ -69,9 +56,37 @@ public class WindStruckAbility extends BaseAbility {
             }
         }
 
+        // Place cobwebs on affected enemies to trap them
+        for (Entity entity : nearbyEntities) {
+            if (entity instanceof LivingEntity && entity != player) {
+                LivingEntity target = (LivingEntity) entity;
+                Location targetLoc = target.getLocation();
+                
+                // Place cobwebs around the enemy to trap them
+                for (int x = -1; x <= 1; x++) {
+                    for (int z = -1; z <= 1; z++) {
+                        Location cobwebLoc = targetLoc.clone().add(x, 0, z);
+                        if (cobwebLoc.getBlock().getType() == Material.AIR) {
+                            cobwebLoc.getBlock().setType(Material.COBWEB);
+                            
+                            // Remove cobweb after 3 seconds
+                            new BukkitRunnable() {
+                                @Override
+                                public void run() {
+                                    if (cobwebLoc.getBlock().getType() == Material.COBWEB) {
+                                        cobwebLoc.getBlock().setType(Material.AIR);
+                                    }
+                                }
+                            }.runTaskLater(plugin, 60L);
+                        }
+                    }
+                }
+            }
+        }
+
         player.sendMessage(Component.text("💨 WIND STRUCK! Trapped " + affectedTargets + " enemies in webs!")
                 .color(NamedTextColor.WHITE));
-        center.getWorld().playSound(center, Sound.BLOCK_COBWEB_PLACE, 1.5f, 0.8f);
+        center.getWorld().playSound(center, Sound.BLOCK_COBWEB_PLACE, 1.5f, 1.5f);
 
         setCooldown(player);
     }

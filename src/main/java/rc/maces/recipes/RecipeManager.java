@@ -15,19 +15,21 @@ public class RecipeManager {
     private final JavaPlugin plugin;
     private final Map<NamespacedKey, CustomRecipe> customRecipes;
     private final List<NamespacedKey> registeredKeys;
+    private final rc.maces.managers.MaceManager maceManager;
 
-    public RecipeManager(JavaPlugin plugin) {
+    public RecipeManager(JavaPlugin plugin, rc.maces.managers.MaceManager maceManager) {
         this.plugin = plugin;
+        this.maceManager = maceManager;
         this.customRecipes = new HashMap<>();
         this.registeredKeys = new ArrayList<>();
     }
 
     public void registerAllRecipes() {
         // Register all mace recipes
-        registerRecipe(new AirmaceRecipe(plugin));
-        registerRecipe(new FiremaceRecipe(plugin));
-        registerRecipe(new WatermaceRecipe(plugin));
-        registerRecipe(new EarthmaceRecipe(plugin));
+        registerRecipe(new AirmaceRecipe(plugin, maceManager));
+        registerRecipe(new FiremaceRecipe(plugin, maceManager));
+        registerRecipe(new WatermaceRecipe(plugin, maceManager));
+        registerRecipe(new EarthmaceRecipe(plugin, maceManager));
     }
 
     private void registerRecipe(CustomRecipe customRecipe) {

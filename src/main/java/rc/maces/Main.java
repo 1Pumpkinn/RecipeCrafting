@@ -20,7 +20,7 @@ public class Main extends JavaPlugin {
         cooldownManager = new CooldownManager();
         elementManager = new ElementManager(this);
         maceManager = new MaceManager(this, cooldownManager);
-        recipeManager = new RecipeManager(this);
+        recipeManager = new RecipeManager(this, maceManager);
 
         // Register commands
         getCommand("airmace").setExecutor(new AirmaceCommand(maceManager));
@@ -29,6 +29,8 @@ public class Main extends JavaPlugin {
         getCommand("earthmace").setExecutor(new EarthmaceCommand(maceManager));
         getCommand("element").setExecutor(new ElementCommand(elementManager));
         getCommand("reroll").setExecutor(new RerollCommand(elementManager));
+        getCommand("myelement").setExecutor(new MyElementCommand(elementManager));
+        getCommand("craftedmaces").setExecutor(new CraftedMacesCommand(elementManager, maceManager));
 
         // Register event listeners
         getServer().getPluginManager().registerEvents(new MaceListener(maceManager, elementManager), this);
@@ -47,7 +49,14 @@ public class Main extends JavaPlugin {
         getLogger().info("Maces plugin enabled!");
         getLogger().info("Registered " + recipeManager.getRecipeCount() + " custom recipes.");
         getLogger().info("Element system initialized - players will be assigned random elements on join!");
-        getLogger().info("REMOVED: Tornado and Fire Passthrough abilities have been removed!");
+        getLogger().info("UPDATED: New passive effects added for all elements!");
+        getLogger().info("UPDATED: Fire Rest, Dolphin's Grace, Hero of the Village 1, Speed 1 effects!");
+        getLogger().info("UPDATED: Wind charges now pull entities when air mace is in offhand!");
+        getLogger().info("UPDATED: Meteors no longer break blocks!");
+        getLogger().info("UPDATED: Obsidian Creation cooldown back to 30s and converts water to obsidian!");
+        getLogger().info("UPDATED: Iron golems no longer attack their summoner!");
+        getLogger().info("UPDATED: Enhanced drowning effects for water mace!");
+        getLogger().info("ADDED: /myelement and /craftedmaces commands!");
         getLogger().info("All abilities now work on both mobs and players!");
     }
 

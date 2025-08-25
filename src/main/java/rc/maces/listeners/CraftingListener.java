@@ -60,11 +60,8 @@ public class CraftingListener implements Listener {
                     return;
                 }
 
-                // Cancel the normal crafting
+                // Cancel the normal crafting and handle it ourselves
                 event.setCancelled(true);
-
-                // Close the player's inventory to prevent issues
-                player.closeInventory();
 
                 // Get our custom recipe and execute its craft action
                 CustomRecipe customRecipe = recipeManager.getCustomRecipe(shapedRecipe.getKey());

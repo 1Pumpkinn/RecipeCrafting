@@ -1,5 +1,8 @@
 package rc.maces.recipes.impl;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -13,28 +16,26 @@ import rc.maces.recipes.CustomRecipe;
 public class EarthmaceRecipe implements CustomRecipe {
 
     private final JavaPlugin plugin;
+    private final rc.maces.managers.MaceManager maceManager;
     private final NamespacedKey recipeKey;
     private final ShapedRecipe bukkitRecipe;
 
-    public EarthmaceRecipe(JavaPlugin plugin) {
+    public EarthmaceRecipe(JavaPlugin plugin, rc.maces.managers.MaceManager maceManager) {
         this.plugin = plugin;
+        this.maceManager = maceManager;
         this.recipeKey = new NamespacedKey(plugin, "earthmace_recipe");
         this.bukkitRecipe = createRecipe();
     }
 
     private ShapedRecipe createRecipe() {
-        ItemStack result = new ItemStack(Material.MACE, 1);
-        var meta = result.getItemMeta();
-        meta.setDisplayName("§aEarth Mace");
-        result.setItemMeta(meta);
+        // Create the actual earth mace using MaceManager
+        ItemStack result = maceManager.createEarthMace();
 
         ShapedRecipe recipe = new ShapedRecipe(recipeKey, result);
-        recipe.shape("MSM", "PHP", "EBE");
-        recipe.setIngredient('M', Material.MOSS_BLOCK);
-        recipe.setIngredient('S', Material.SCULK_CATALYST);
-        recipe.setIngredient('P', Material.PINK_WOOL);
+        recipe.shape("SGS", "GHG", "SBS");
+        recipe.setIngredient('S', Material.STONE);
+        recipe.setIngredient('G', Material.GRASS_BLOCK);
         recipe.setIngredient('H', Material.HEAVY_CORE);
-        recipe.setIngredient('E', Material.DEEPSLATE_EMERALD_ORE);
         recipe.setIngredient('B', Material.BREEZE_ROD);
 
         return recipe;
@@ -57,8 +58,9 @@ public class EarthmaceRecipe implements CustomRecipe {
 
     @Override
     public void onCraft(Player player) {
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "earthmace " + player.getName());
-        });
+        // Give the player the earth mace directly
+        player.getInventory().addItem(maceManager.createEarthMace());
+        player.sendMessage(Component.text("🌍 You crafted an Earth Mace!")
+                .color(NamedTextColor.GREEN));
     }
 }

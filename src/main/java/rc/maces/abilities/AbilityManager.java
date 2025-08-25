@@ -68,7 +68,7 @@ public class AbilityManager {
 
     // Ability key constants for easier reference
 
-    //WATER
+    //AIR
     public static final String WIND_SHOT = "wind_shot";
     public static final String WIND_STRUCK = "wind_struck";
     //FIRE

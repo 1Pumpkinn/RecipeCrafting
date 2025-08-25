@@ -66,6 +66,7 @@ public class MeteorsAbility extends BaseAbility {
                 meteor.setShooter(player);
                 meteor.setDirection(new Vector(0, -1, 0));
                 meteor.setVelocity(new Vector(0, -2.5, 0));
+                meteor.setYield(0.0f); // Set explosion yield to 0 to prevent block breaking
 
                 // Schedule impact
                 new BukkitRunnable() {

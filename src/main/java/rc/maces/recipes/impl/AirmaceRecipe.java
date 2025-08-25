@@ -1,5 +1,8 @@
 package rc.maces.recipes.impl;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -13,20 +16,20 @@ import rc.maces.recipes.CustomRecipe;
 public class AirmaceRecipe implements CustomRecipe {
 
     private final JavaPlugin plugin;
+    private final rc.maces.managers.MaceManager maceManager;
     private final NamespacedKey recipeKey;
     private final ShapedRecipe bukkitRecipe;
 
-    public AirmaceRecipe(JavaPlugin plugin) {
+    public AirmaceRecipe(JavaPlugin plugin, rc.maces.managers.MaceManager maceManager) {
         this.plugin = plugin;
+        this.maceManager = maceManager;
         this.recipeKey = new NamespacedKey(plugin, "airmace_recipe");
         this.bukkitRecipe = createRecipe();
     }
 
     private ShapedRecipe createRecipe() {
-        ItemStack result = new ItemStack(Material.MACE, 1);
-        var meta = result.getItemMeta();
-        meta.setDisplayName("§bAirmace Placeholder");
-        result.setItemMeta(meta);
+        // Create the actual air mace using MaceManager
+        ItemStack result = maceManager.createAirMace();
 
         ShapedRecipe recipe = new ShapedRecipe(recipeKey, result);
         recipe.shape("GNG", "PHP", "WBW");
@@ -57,8 +60,9 @@ public class AirmaceRecipe implements CustomRecipe {
 
     @Override
     public void onCraft(Player player) {
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "airmace " + player.getName());
-        });
+        // Give the player the air mace directly
+        player.getInventory().addItem(maceManager.createAirMace());
+        player.sendMessage(Component.text("💨 You crafted an Air Mace!")
+                .color(NamedTextColor.GREEN));
     }
 }

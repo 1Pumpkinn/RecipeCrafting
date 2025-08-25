@@ -1,5 +1,8 @@
 package rc.maces.recipes.impl;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -13,20 +16,20 @@ import rc.maces.recipes.CustomRecipe;
 public class FiremaceRecipe implements CustomRecipe {
 
     private final JavaPlugin plugin;
+    private final rc.maces.managers.MaceManager maceManager;
     private final NamespacedKey recipeKey;
     private final ShapedRecipe bukkitRecipe;
 
-    public FiremaceRecipe(JavaPlugin plugin) {
+    public FiremaceRecipe(JavaPlugin plugin, rc.maces.managers.MaceManager maceManager) {
         this.plugin = plugin;
+        this.maceManager = maceManager;
         this.recipeKey = new NamespacedKey(plugin, "firemace_recipe");
         this.bukkitRecipe = createRecipe();
     }
 
     private ShapedRecipe createRecipe() {
-        ItemStack result = new ItemStack(Material.MACE, 1);
-        var meta = result.getItemMeta();
-        meta.setDisplayName("§cFiremace Placeholder");
-        result.setItemMeta(meta);
+        // Create the actual fire mace using MaceManager
+        ItemStack result = maceManager.createFireMace();
 
         ShapedRecipe recipe = new ShapedRecipe(recipeKey, result);
         recipe.shape("LWL", "LHL", "DBD");
@@ -56,8 +59,9 @@ public class FiremaceRecipe implements CustomRecipe {
 
     @Override
     public void onCraft(Player player) {
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "firemace " + player.getName());
-        });
+        // Give the player the fire mace directly
+        player.getInventory().addItem(maceManager.createFireMace());
+        player.sendMessage(Component.text("🔥 You crafted a Fire Mace!")
+                .color(NamedTextColor.RED));
     }
 }

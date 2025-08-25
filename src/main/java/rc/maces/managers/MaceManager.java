@@ -36,13 +36,13 @@ public class MaceManager {
         meta.lore(Arrays.asList(
                 Component.text("💨 Right-click: Wind Shot (5s cooldown)")
                         .color(NamedTextColor.DARK_GRAY),
-                Component.text("💨 F key: Wind Struck (20s cooldown)")
+                Component.text("💨 F key: Wind Struck (25s cooldown)")
                         .color(NamedTextColor.DARK_GRAY),
                 Component.text("💨 Passive: No fall damage")
                         .color(NamedTextColor.DARK_GRAY),
                 Component.text("💨 Passive: Hit gives slow falling")
                         .color(NamedTextColor.DARK_GRAY),
-                Component.text("💨 Passive: Wind charges pull entities")
+                Component.text("💨 Passive: Wind charges pull entities with enhanced force")
                         .color(NamedTextColor.DARK_GRAY)
         ));
 
@@ -59,6 +59,8 @@ public class MaceManager {
                 .decoration(TextDecoration.BOLD, true));
 
         meta.lore(Arrays.asList(
+                Component.text("🔥 Right-click: Obsidian Creation (30s cooldown)")
+                        .color(NamedTextColor.DARK_GRAY),
                 Component.text("🔥 F key: Meteors (25s cooldown)")
                         .color(NamedTextColor.DARK_GRAY),
                 Component.text("🔥 Passive: Fire immunity")
@@ -86,7 +88,7 @@ public class MaceManager {
                         .color(NamedTextColor.DARK_GRAY),
                 Component.text("🌊 F key: Water Geyser (30s cooldown)")
                         .color(NamedTextColor.DARK_GRAY),
-                Component.text("🌊 Passive: Nearby entities drown 4x4")
+                Component.text("🌊 Passive: Nearby entities drown 4x4 (works anywhere)")
                         .color(NamedTextColor.DARK_GRAY),
                 Component.text("🌊 Passive: 5x faster in water")
                         .color(NamedTextColor.DARK_GRAY),
@@ -109,9 +111,7 @@ public class MaceManager {
         meta.lore(Arrays.asList(
                 Component.text("🌍 Right-click: Buddy Up (15s cooldown)")
                         .color(NamedTextColor.DARK_GRAY),
-                Component.text("🌍 F key: Vine Pull (25s cooldown)") // UPDATED: Shows VinePull
-                        .color(NamedTextColor.DARK_GRAY),
-                Component.text("🌍 Shift: Obsidian Creation (30s cooldown)") // NEW: ObsidianCreation
+                Component.text("🌍 F key: Vine Pull (25s cooldown)")
                         .color(NamedTextColor.DARK_GRAY),
                 Component.text("🌍 Passive: Haste 5")
                         .color(NamedTextColor.DARK_GRAY),
@@ -185,6 +185,8 @@ public class MaceManager {
             appendAbilityStatus(sb, player, AbilityManager.WIND_STRUCK, "Wind Struck", "§7");
         } else if (isFireMace(mainHand)) {
             sb.append("§c§lFire §6§lMace §8| ");
+            appendAbilityStatus(sb, player, AbilityManager.OBSIDIAN_CREATION, "Obsidian Creation", "§6");
+            sb.append(" §8| ");
             appendAbilityStatus(sb, player, AbilityManager.METEORS, "Meteors", "§6");
         } else if (isWaterMace(mainHand)) {
             sb.append("§1§lWater §9§lMace §8| ");
@@ -195,7 +197,7 @@ public class MaceManager {
             sb.append("§2§lEarth §a§lMace §8| ");
             appendAbilityStatus(sb, player, AbilityManager.BUDDY_UP, "Buddy Up", "§2");
             sb.append(" §8| ");
-            appendAbilityStatus(sb, player, AbilityManager.VINE_PULL, "Vine Pull", "§a"); // UPDATED
+            appendAbilityStatus(sb, player, AbilityManager.VINE_PULL, "Vine Pull", "§a");
         }
 
         return sb.toString();

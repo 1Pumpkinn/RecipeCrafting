@@ -1,10 +1,14 @@
 package rc.maces.listeners;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Particle;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
@@ -39,11 +43,11 @@ public class MaceListener implements Listener {
         if (maceManager.isAirMace(item)) {
             maceManager.getAbilityManager().executeAbility(player, AbilityManager.WIND_SHOT);
         } else if (maceManager.isFireMace(item)) {
-            // Fire Passthrough removed - no right-click ability for fire mace now
+            maceManager.getAbilityManager().executeAbility(player, AbilityManager.OBSIDIAN_CREATION);
         } else if (maceManager.isWaterMace(item)) {
             maceManager.getAbilityManager().executeAbility(player, AbilityManager.WATER_HEAL);
         } else if (maceManager.isEarthMace(item)) {
-            maceManager.getAbilityManager().executeAbility(player, AbilityManager.VINE_PULL);
+            maceManager.getAbilityManager().executeAbility(player, AbilityManager.BUDDY_UP);
         }
     }
 
@@ -62,7 +66,6 @@ public class MaceListener implements Listener {
             } else if (maceManager.isWaterMace(item)) {
                 maceManager.getAbilityManager().executeAbility(player, AbilityManager.WATER_GEYSER);
             } else if (maceManager.isEarthMace(item)) {
-                // UPDATED: Now uses VinePull instead of Tornado
                 maceManager.getAbilityManager().executeAbility(player, AbilityManager.VINE_PULL);
             }
         }
@@ -87,17 +90,6 @@ public class MaceListener implements Listener {
             if (maceManager.isFireMace(weapon) || "FIRE".equals(elementManager.getPlayerElement(attacker))) {
                 event.getEntity().setFireTicks(100); // Ignite victim
             }
-
-            // Earth Mace golem protection - only trigger when other players attack the earth mace holder
-            if (event.getEntity() instanceof Player) {
-                Player victim = (Player) event.getEntity();
-                ItemStack victimWeapon = victim.getInventory().getItemInMainHand();
-
-                // Only trigger golem protection if the victim has earth mace and attacker is different player
-                if (maceManager.isEarthMace(victimWeapon) && !attacker.equals(victim)) {
-                    BuddyUpAbility.handlePlayerDamage(event, victim);
-                }
-            }
         }
 
         // Handle golem damage to prevent attacking summoner
@@ -106,7 +98,7 @@ public class MaceListener implements Listener {
             BuddyUpAbility.handleGolemDamage(event, golem);
         }
 
-        // Handle golem protection for any living entity attacking a player (but not the summoner attacking their own golem)
+        // Handle golem protection for any living entity attacking a player
         if (event.getEntity() instanceof Player && event.getDamager() instanceof LivingEntity) {
             Player victim = (Player) event.getEntity();
             LivingEntity damager = (LivingEntity) event.getDamager();
@@ -117,6 +109,15 @@ public class MaceListener implements Listener {
                     damager.getCustomName().contains(victim.getName()))) {
                 BuddyUpAbility.handlePlayerDamage(event, victim);
             }
+        }
+    }
+
+    @EventHandler
+    public void onEntityDeath(EntityDeathEvent event) {
+        // Handle golem death cleanup
+        if (event.getEntity() instanceof IronGolem) {
+            IronGolem golem = (IronGolem) event.getEntity();
+            BuddyUpAbility.handleGolemDeath(golem);
         }
     }
 
@@ -156,21 +157,32 @@ public class MaceListener implements Listener {
             if (shooter instanceof Player) {
                 Player shooterPlayer = (Player) shooter;
 
-                // Check if shooter has air mace or air element
+                // Check if shooter has air mace in main hand or offhand, or has air element
                 ItemStack mainHand = shooterPlayer.getInventory().getItemInMainHand();
+                ItemStack offHand = shooterPlayer.getInventory().getItemInOffHand();
                 String shooterElement = elementManager.getPlayerElement(shooterPlayer);
 
-                if (maceManager.isAirMace(mainHand) || "AIR".equals(shooterElement)) {
-                    // Pull the hit entity towards the shooter with stronger force
+                if (maceManager.isAirMace(mainHand) || maceManager.isAirMace(offHand) || "AIR".equals(shooterElement)) {
+                    // Enhanced pulling effect for air mace/element - pull entities into the air towards the player
                     Vector direction = shooterPlayer.getLocation().toVector()
                             .subtract(hitEntity.getLocation().toVector())
                             .normalize()
-                            .multiply(2.5); // Stronger pull force
+                            .multiply(2.5); // Strong pull force
 
-                    // Set Y component to prevent getting stuck in ground
-                    direction.setY(Math.max(direction.getY(), 0.5));
+                    // Strong upward component to pull entities into the air
+                    direction.setY(1.2); // Pull entities up into the air
 
                     hitEntity.setVelocity(direction);
+                    
+                    // Add visual effects for the pull
+                    hitEntity.getWorld().spawnParticle(Particle.CLOUD, hitEntity.getLocation(), 15);
+                    hitEntity.getWorld().spawnParticle(Particle.SMOKE, hitEntity.getLocation(), 10);
+                    
+                    // Send message to players
+                    if (hitEntity instanceof Player) {
+                        ((Player) hitEntity).sendMessage(Component.text("💨 Pulled into the air by wind charge!")
+                                .color(NamedTextColor.GRAY));
+                    }
                 }
             }
         }

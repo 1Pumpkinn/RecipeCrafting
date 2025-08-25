@@ -1,6 +1,9 @@
 // WatermaceRecipe.java
 package rc.maces.recipes.impl;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -14,29 +17,26 @@ import rc.maces.recipes.CustomRecipe;
 public class WatermaceRecipe implements CustomRecipe {
 
     private final JavaPlugin plugin;
+    private final rc.maces.managers.MaceManager maceManager;
     private final NamespacedKey recipeKey;
     private final ShapedRecipe bukkitRecipe;
 
-    public WatermaceRecipe(JavaPlugin plugin) {
+    public WatermaceRecipe(JavaPlugin plugin, rc.maces.managers.MaceManager maceManager) {
         this.plugin = plugin;
+        this.maceManager = maceManager;
         this.recipeKey = new NamespacedKey(plugin, "watermace_recipe");
         this.bukkitRecipe = createRecipe();
     }
 
     private ShapedRecipe createRecipe() {
-        ItemStack result = new ItemStack(Material.MACE, 1);
-        var meta = result.getItemMeta();
-        meta.setDisplayName("§9Water Mace Placeholder");
-        result.setItemMeta(meta);
+        // Create the actual water mace using MaceManager
+        ItemStack result = maceManager.createWaterMace();
 
         ShapedRecipe recipe = new ShapedRecipe(recipeKey, result);
-        recipe.shape("FCF", "WHR", "TBT");
-        recipe.setIngredient('F', Material.TROPICAL_FISH_BUCKET);
-        recipe.setIngredient('C', Material.CONDUIT);
+        recipe.shape("WNW", "WHW", "WBW");
+        recipe.setIngredient('W', Material.WATER_BUCKET);
+        recipe.setIngredient('N', Material.NAUTILUS_SHELL);
         recipe.setIngredient('H', Material.HEAVY_CORE);
-        recipe.setIngredient('W', Material.TUBE_CORAL);
-        recipe.setIngredient('R', Material.FIRE_CORAL);
-        recipe.setIngredient('T', Material.TRIDENT);
         recipe.setIngredient('B', Material.BREEZE_ROD);
 
         return recipe;
@@ -59,8 +59,9 @@ public class WatermaceRecipe implements CustomRecipe {
 
     @Override
     public void onCraft(Player player) {
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "watermace " + player.getName());
-        });
+        // Give the player the water mace directly
+        player.getInventory().addItem(maceManager.createWaterMace());
+        player.sendMessage(Component.text("🌊 You crafted a Water Mace!")
+                .color(NamedTextColor.BLUE));
     }
 }

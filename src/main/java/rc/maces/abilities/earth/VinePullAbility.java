@@ -4,6 +4,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
@@ -37,7 +38,6 @@ public class VinePullAbility extends BaseAbility {
         if (!canUse(player)) return;
 
         Location center = player.getLocation();
-        Set<Location> vineLocations = new HashSet<>();
         Map<LivingEntity, Location> entangledEntities = new HashMap<>();
 
         new BukkitRunnable() {
@@ -45,14 +45,7 @@ public class VinePullAbility extends BaseAbility {
 
             @Override
             public void run() {
-                if (ticks >= 60) { // 3 seconds
-                    // Remove all vines
-                    for (Location vineLoc : vineLocations) {
-                        if (vineLoc.getBlock().getType() == Material.VINE) {
-                            vineLoc.getBlock().setType(Material.AIR);
-                        }
-                    }
-
+                if (ticks >= 100) { // 5 seconds
                     // Clear entangled entities map
                     entangledEntities.clear();
                     cancel();
@@ -92,15 +85,12 @@ public class VinePullAbility extends BaseAbility {
                                 targetPlayer.setFlySpeed(0.0f);
                             }
 
-                            // Place vines around target temporarily
+                            // Add vine particles around target instead of placing blocks
                             Location targetLoc = target.getLocation();
                             for (int x = -1; x <= 1; x++) {
                                 for (int z = -1; z <= 1; z++) {
-                                    Location vineLoc = targetLoc.clone().add(x, 0, z);
-                                    if (vineLoc.getBlock().getType() == Material.AIR) {
-                                        vineLoc.getBlock().setType(Material.VINE);
-                                        vineLocations.add(vineLoc);
-                                    }
+                                    Location particleLoc = targetLoc.clone().add(x, 0, z);
+                                    targetLoc.getWorld().spawnParticle(Particle.BLOCK_CRUMBLE, particleLoc, 5, Material.VINE.createBlockData());
                                 }
                             }
 
@@ -142,7 +132,7 @@ public class VinePullAbility extends BaseAbility {
             }
         }.runTaskTimer(plugin, 0L, 1L);
 
-        player.sendMessage(Component.text("🌿 VINE PULL! Completely stunning and immobilizing all enemies!")
+        player.sendMessage(Component.text("🌿 VINE PULL! Pulling enemies into you and stunning them for 5 seconds!")
                 .color(NamedTextColor.GREEN));
         center.getWorld().playSound(center, Sound.BLOCK_GRASS_BREAK, 2.0f, 0.6f);
         center.getWorld().playSound(center, Sound.ENTITY_SPIDER_STEP, 1.5f, 0.8f);

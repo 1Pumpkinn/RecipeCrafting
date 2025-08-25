@@ -13,7 +13,7 @@ import rc.maces.managers.CooldownManager;
 
 import java.util.*;
 
-// BuddyUp Ability - Summons a protective iron golem that attacks ALL living entities except summoner
+// BuddyUp Ability - Summons a protective iron golem that attacks enemies of the summoner
 public class BuddyUpAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -42,6 +42,9 @@ public class BuddyUpAbility extends BaseAbility {
         // Make it protect the player
         golem.setCustomName("§a" + player.getName() + "'s Buddy");
         golem.setCustomNameVisible(true);
+        
+        // Make the golem not target its summoner
+        golem.setTarget(null);
 
         // Store both the golem reference and its UUID to track it
         playerGolems.put(player.getUniqueId(), golem);
@@ -70,14 +73,14 @@ public class BuddyUpAbility extends BaseAbility {
         }
     }
 
-    // Handle when the player gets damaged by ANY living entity, but prevent golem from attacking summoner
+    // Handle when the player gets damaged by ANY living entity
     public static void handlePlayerDamage(EntityDamageByEntityEvent event, Player victim) {
         IronGolem golem = playerGolems.get(victim.getUniqueId());
         if (golem != null && !golem.isDead() && event.getDamager() instanceof LivingEntity) {
             LivingEntity attacker = (LivingEntity) event.getDamager();
 
             // Don't make golem attack its own summoner
-            if (attacker instanceof Player && attacker.equals(victim)) {
+            if (attacker.equals(victim)) {
                 return;
             }
 
@@ -86,7 +89,12 @@ public class BuddyUpAbility extends BaseAbility {
                 return;
             }
 
-            // Make golem target the attacker (works on ALL living entities except summoner)
+            // Don't make golem attack the summoner even if they're attacking someone else
+            if (attacker.equals(victim)) {
+                return;
+            }
+
+            // Make golem target the attacker
             golem.setTarget(attacker);
         }
     }
@@ -125,5 +133,12 @@ public class BuddyUpAbility extends BaseAbility {
             IronGolem playerGolem = entry.getValue();
             return playerGolem != null && playerGolem.getUniqueId().equals(golemUUID);
         });
+    }
+
+    // Method to handle golem death events
+    public static void handleGolemDeath(IronGolem golem) {
+        if (golemUUIDs.contains(golem.getUniqueId())) {
+            cleanupGolem(golem);
+        }
     }
 }

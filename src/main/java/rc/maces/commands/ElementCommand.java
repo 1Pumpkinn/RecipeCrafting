@@ -166,58 +166,34 @@ public class ElementCommand implements CommandExecutor {
                 .append(Component.text(displayName)
                         .color(elementColor)));
 
-        // Element-specific information based on actual abilities
+        // New simplified element information format
         switch (element) {
             case "FIRE":
-                sender.sendMessage(Component.text("   ⚔️ Abilities: Obsidian Creation, Meteors")
-                        .color(NamedTextColor.GRAY));
-                sender.sendMessage(Component.text("   🔥 Obsidian Creation (15s CD): Turn water/lava to obsidian in 4x4")
+                sender.sendMessage(Component.text("   🔥 Fire Rest - Immune to fire damage and gain strength when on fire")
                         .color(NamedTextColor.YELLOW));
-                sender.sendMessage(Component.text("   ☄️ Meteors (25s CD): Rain 15 meteors in 7x7 area")
-                        .color(NamedTextColor.YELLOW));
-                sender.sendMessage(Component.text("   💪 Strengths: Terrain control, massive area damage")
+                sender.sendMessage(Component.text("   ⚔️ Can craft only fire mace")
                         .color(NamedTextColor.GREEN));
-                sender.sendMessage(Component.text("   🛡️ Weaknesses: Long cooldowns, requires water/lava nearby")
-                        .color(NamedTextColor.RED));
                 break;
 
             case "WATER":
-                sender.sendMessage(Component.text("   ⚔️ Abilities: Water Heal, Water Geyser")
-                        .color(NamedTextColor.GRAY));
-                sender.sendMessage(Component.text("   🌊 Water Heal (10s CD): Restore 2 hearts instantly")
+                sender.sendMessage(Component.text("   🌊 Dolphin's Grace - Enhanced swimming speed and water breathing")
                         .color(NamedTextColor.YELLOW));
-                sender.sendMessage(Component.text("   🌊 Water Geyser (30s CD): Launch enemies upward for 2s")
-                        .color(NamedTextColor.YELLOW));
-                sender.sendMessage(Component.text("   💪 Strengths: Self-healing, crowd control, displacement")
+                sender.sendMessage(Component.text("   ⚔️ Can craft only water mace")
                         .color(NamedTextColor.GREEN));
-                sender.sendMessage(Component.text("   🛡️ Weaknesses: Limited offensive damage, fire vulnerability")
-                        .color(NamedTextColor.RED));
                 break;
 
             case "EARTH":
-                sender.sendMessage(Component.text("   ⚔️ Abilities: Buddy Up, Vine Pull")
-                        .color(NamedTextColor.GRAY));
-                sender.sendMessage(Component.text("   🤖 Buddy Up (15s CD): Summon protective iron golem")
+                sender.sendMessage(Component.text("   🌍 Hero of the Village 1 - Enhanced trading and village benefits")
                         .color(NamedTextColor.YELLOW));
-                sender.sendMessage(Component.text("   🌿 Vine Pull (20s CD): Pull & immobilize enemies for 3s")
-                        .color(NamedTextColor.YELLOW));
-                sender.sendMessage(Component.text("   💪 Strengths: Tank support, crowd control, immobilization")
+                sender.sendMessage(Component.text("   ⚔️ Can craft only earth mace")
                         .color(NamedTextColor.GREEN));
-                sender.sendMessage(Component.text("   🛡️ Weaknesses: Relies on positioning and timing")
-                        .color(NamedTextColor.RED));
                 break;
 
             case "AIR":
-                sender.sendMessage(Component.text("   ⚔️ Abilities: Wind Shot, Wind Struck")
-                        .color(NamedTextColor.GRAY));
-                sender.sendMessage(Component.text("   💨 Wind Shot (5s CD): Launch wind charge projectile")
+                sender.sendMessage(Component.text("   💨 Speed 1 - Enhanced movement and wind control")
                         .color(NamedTextColor.YELLOW));
-                sender.sendMessage(Component.text("   💨 Wind Struck (20s CD): Trap enemies in webs + slow fall")
-                        .color(NamedTextColor.YELLOW));
-                sender.sendMessage(Component.text("   💪 Strengths: Fast attacks, mobility control, area denial")
+                sender.sendMessage(Component.text("   ⚔️ Can craft only air mace")
                         .color(NamedTextColor.GREEN));
-                sender.sendMessage(Component.text("   🛡️ Weaknesses: Lower direct damage, earth terrain blocks")
-                        .color(NamedTextColor.RED));
                 break;
         }
     }

@@ -11,6 +11,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
 import rc.maces.abilities.BaseAbility;
 import rc.maces.managers.CooldownManager;
 
@@ -35,31 +36,41 @@ public class ObsidianCreationAbility extends BaseAbility {
         Map<Location, Material> originalBlocks = new HashMap<>();
         int waterConverted = 0;
 
-        // Convert all water blocks in a 7x7x3 area to obsidian
-        for (int x = -3; x <= 3; x++) {
-            for (int z = -3; z <= 3; z++) {
-                for (int y = -1; y <= 1; y++) {
-                    Location loc = center.clone().add(x, y, z);
-                    Material originalBlock = loc.getBlock().getType();
+        // Find all entities in the area and spawn obsidian on them
+        Collection<Entity> nearbyEntities = center.getWorld().getNearbyEntities(center, 4, 4, 4);
+        for (Entity entity : nearbyEntities) {
+            if (entity instanceof LivingEntity && entity != player) {
+                LivingEntity target = (LivingEntity) entity;
+                Location targetLoc = target.getLocation();
+                
+                // Spawn obsidian at the entity's location and around them
+                for (int x = -1; x <= 1; x++) {
+                    for (int z = -1; z <= 1; z++) {
+                        for (int y = 0; y <= 2; y++) {
+                            Location obsidianLoc = targetLoc.clone().add(x, y, z);
+                            Material blockType = obsidianLoc.getBlock().getType();
+                            
+                            // Only replace air, water, or lava blocks
+                            if (blockType == Material.AIR || blockType == Material.WATER || blockType == Material.LAVA) {
+                                originalBlocks.put(obsidianLoc.clone(), blockType);
+                                obsidianLoc.getBlock().setType(Material.OBSIDIAN);
+                                waterConverted++;
 
-                    // ONLY convert water blocks to obsidian
-                    if (originalBlock == Material.WATER) {
-                        originalBlocks.put(loc.clone(), originalBlock);
-                        loc.getBlock().setType(Material.OBSIDIAN);
-                        waterConverted++;
-
-                        // Visual effects at conversion sites
-                        loc.getWorld().spawnParticle(Particle.SMOKE, loc.add(0.5, 0.5, 0.5), 8);
-                        loc.getWorld().spawnParticle(Particle.LAVA, loc, 3);
+                                // Enhanced visual effects at obsidian creation sites
+                                obsidianLoc.getWorld().spawnParticle(Particle.SMOKE, obsidianLoc.add(0.5, 0.5, 0.5), 15);
+                                obsidianLoc.getWorld().spawnParticle(Particle.LAVA, obsidianLoc, 8);
+                                obsidianLoc.getWorld().spawnParticle(Particle.FLAME, obsidianLoc, 12);
+                            }
+                        }
                     }
                 }
             }
         }
 
         if (waterConverted == 0) {
-            player.sendMessage(Component.text("🖤 No water found to convert to obsidian!")
+            player.sendMessage(Component.text("🖤 No entities found to trap in obsidian!")
                     .color(NamedTextColor.GRAY));
-            return; // Don't set cooldown if no water was found
+            return; // Don't set cooldown if no obsidian was created
         }
 
         player.sendMessage(Component.text("🖤 OBSIDIAN CREATION! Converted " + waterConverted + " water blocks to obsidian!")
@@ -73,23 +84,15 @@ public class ObsidianCreationAbility extends BaseAbility {
 
             @Override
             public void run() {
-                if (ticks >= 200) { // 10 seconds
-                    // Restore original water blocks
-                    for (Map.Entry<Location, Material> entry : originalBlocks.entrySet()) {
-                        Location loc = entry.getKey();
-                        Material original = entry.getValue();
-
-                        if (loc.getBlock().getType() == Material.OBSIDIAN) {
-                            loc.getBlock().setType(original); // Restore to water
-                        }
-                    }
+                if (ticks >= 300) { // 15 seconds (increased duration)
+                    // Obsidian is now permanent - no restoration
                     cancel();
                     return;
                 }
 
-                // Deal damage to entities standing on obsidian blocks (that were water) every 2 seconds
-                if (ticks % 40 == 0) {
-                    Collection<Entity> nearby = center.getWorld().getNearbyEntities(center, 4, 4, 4);
+                // Deal damage to entities standing on obsidian blocks (that were water) every 1.5 seconds
+                if (ticks % 30 == 0) {
+                    Collection<Entity> nearby = center.getWorld().getNearbyEntities(center, 5, 5, 5);
                     for (Entity entity : nearby) {
                         if (entity instanceof LivingEntity && entity != player) {
                             LivingEntity target = (LivingEntity) entity;
@@ -110,17 +113,25 @@ public class ObsidianCreationAbility extends BaseAbility {
                             }
 
                             if (isOnConvertedObsidian) {
-                                // Deal 1.5 hearts (3 damage) true damage
-                                double newHealth = Math.max(0, target.getHealth() - 3.0);
+                                // Deal 2 hearts (4 damage) true damage + ignite
+                                double newHealth = Math.max(0, target.getHealth() - 4.0);
                                 target.setHealth(newHealth);
+                                target.setFireTicks(60); // Ignite for 3 seconds
 
-                                // Visual effects
-                                targetLoc.getWorld().spawnParticle(Particle.LAVA, targetLoc, 12);
-                                targetLoc.getWorld().spawnParticle(Particle.SMOKE, targetLoc, 10);
-                                targetLoc.getWorld().playSound(targetLoc, Sound.BLOCK_LAVA_POP, 1.0f, 1.2f);
+                                // Add knockback effect
+                                Vector knockback = targetLoc.toVector().subtract(center.toVector()).normalize().multiply(1.5);
+                                knockback.setY(0.8); // Add upward component
+                                target.setVelocity(knockback);
+
+                                // Enhanced visual effects
+                                targetLoc.getWorld().spawnParticle(Particle.LAVA, targetLoc, 20);
+                                targetLoc.getWorld().spawnParticle(Particle.SMOKE, targetLoc, 15);
+                                targetLoc.getWorld().spawnParticle(Particle.FLAME, targetLoc, 25);
+                                targetLoc.getWorld().playSound(targetLoc, Sound.BLOCK_LAVA_POP, 1.5f, 1.2f);
+                                targetLoc.getWorld().playSound(targetLoc, Sound.ENTITY_GENERIC_BURN, 1.0f, 1.0f);
 
                                 if (target instanceof Player) {
-                                    ((Player) target).sendMessage(Component.text("🖤 Burning on converted obsidian! Taking damage!")
+                                    ((Player) target).sendMessage(Component.text("🖤🔥 Burning on converted obsidian! Taking damage and ignited!")
                                             .color(NamedTextColor.DARK_PURPLE));
                                 }
                             }

@@ -1,8 +1,8 @@
-name: RecipeCrating
+name: RecipeCrafting
 version: '2.0-SNAPSHOT'
 main: rc.maces.Main
 api-version: '1.21'
-description: Elemental maces with special abilities, element roles, and optimized structure
+description: Elemental maces with special abilities, element roles, and optimized structure. Features BuddyUp, VinePull, ObsidianCreation, and more!
 
 commands:
   airmace:
@@ -30,6 +30,14 @@ commands:
     usage: /<command> [player]
     permission: element.reroll
     aliases: [elementreroll, rollnew]
+  myelement:
+    description: Show your element information
+    usage: /<command>
+    permission: element.info
+  craftedmaces:
+    description: Show your crafted maces count
+    usage: /<command>
+    permission: element.info
 
 permissions:
   airmace.give:
@@ -53,3 +61,6 @@ permissions:
   element.reroll.others:
     description: Allows rerolling other players' elements
     default: op
+  element.info:
+    description: Allows viewing element information
+    default: true
