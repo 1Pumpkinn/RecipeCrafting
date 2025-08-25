@@ -24,16 +24,20 @@ import rc.maces.managers.ElementManager;
 import rc.maces.managers.MaceManager;
 import rc.maces.managers.TrustManager;
 
+import java.util.Random;
+
 public class MaceListener implements Listener {
 
     private final MaceManager maceManager;
     private final ElementManager elementManager;
     private final TrustManager trustManager;
+    private final Random random;
 
     public MaceListener(MaceManager maceManager, ElementManager elementManager, TrustManager trustManager) {
         this.maceManager = maceManager;
         this.elementManager = elementManager;
         this.trustManager = trustManager;
+        this.random = new Random();
     }
 
     @EventHandler
@@ -108,6 +112,26 @@ public class MaceListener implements Listener {
                 // Fire Mace or Fire element: Ignite on hit
                 if (maceManager.isFireMace(weapon) || "FIRE".equals(elementManager.getPlayerElement(attacker))) {
                     event.getEntity().setFireTicks(100); // Ignite victim
+                }
+
+                // NEW: Water Mace or Water element: 1% chance to give Mining Fatigue 3 for 2 seconds
+                if (maceManager.isWaterMace(weapon) || "WATER".equals(elementManager.getPlayerElement(attacker))) {
+                    if (random.nextInt(100) == 0) { // 1% chance (0 out of 100)
+                        victim.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, 40, 2)); // 2 seconds, level 3
+
+                        // Send message to attacker
+                        attacker.sendMessage(Component.text("💧 MINING FATIGUE! 1% chance activated!")
+                                .color(NamedTextColor.BLUE));
+
+                        // Send message to victim if it's a player
+                        if (victim instanceof Player) {
+                            ((Player) victim).sendMessage(Component.text("💧 You have been slowed by water magic!")
+                                    .color(NamedTextColor.DARK_BLUE));
+                        }
+
+                        // Visual effect
+                        victim.getWorld().spawnParticle(Particle.SPLASH, victim.getLocation().add(0, 1, 0), 15);
+                    }
                 }
             }
 

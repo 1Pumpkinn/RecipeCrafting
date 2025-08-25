@@ -14,6 +14,7 @@ public class Main extends JavaPlugin {
     private MaceManager maceManager;
     private RecipeManager recipeManager;
     private TrustManager trustManager;
+    private PassiveEffectsListener passiveEffectsListener; // FIXED: Store reference
 
     @Override
     public void onEnable() {
@@ -59,9 +60,9 @@ public class Main extends JavaPlugin {
         // Start action bar task
         new ActionBarTask(maceManager).runTaskTimer(this, 0L, 1L);
 
-        // Start passive effects task
-        new PassiveEffectsListener(maceManager, elementManager, trustManager)
-                .runTaskTimer(this, 0L, 20L); // Every second
+        // FIXED: Create and store PassiveEffectsListener reference
+        passiveEffectsListener = new PassiveEffectsListener(maceManager, elementManager, trustManager);
+        passiveEffectsListener.runTaskTimer(this, 0L, 20L); // Every second
 
         // Plugin startup messages
         getLogger().info("Maces plugin enabled!");
@@ -89,6 +90,7 @@ public class Main extends JavaPlugin {
         if (trustManager != null) {
             trustManager.saveAllData();
         }
+
         getLogger().info("Maces plugin disabled!");
     }
 
@@ -111,5 +113,10 @@ public class Main extends JavaPlugin {
 
     public TrustManager getTrustManager() {
         return trustManager;
+    }
+
+    // ADDED: Getter for PassiveEffectsListener if needed elsewhere
+    public PassiveEffectsListener getPassiveEffectsListener() {
+        return passiveEffectsListener;
     }
 }
