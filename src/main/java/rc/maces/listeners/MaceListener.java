@@ -169,7 +169,7 @@ public class MaceListener implements Listener {
     public void onProjectileHit(ProjectileHitEvent event) {
         Projectile projectile = event.getEntity();
 
-        // Wind Charge pulling effect - works on ALL living entities (with mace or air element role)
+        // Wind Charge pulling effect - works on ALL living entities including the shooter
         if (projectile instanceof WindCharge && event.getHitEntity() instanceof LivingEntity) {
             LivingEntity hitEntity = (LivingEntity) event.getHitEntity();
             ProjectileSource shooter = projectile.getShooter();
@@ -177,8 +177,8 @@ public class MaceListener implements Listener {
             if (shooter instanceof Player) {
                 Player shooterPlayer = (Player) shooter;
 
-                // Check trust system - don't affect trusted players
-                if (hitEntity instanceof Player && trustManager.isTrusted(shooterPlayer, (Player) hitEntity)) {
+                // Check trust system - don't affect trusted players (but shooter can affect themselves)
+                if (hitEntity instanceof Player && hitEntity != shooterPlayer && trustManager.isTrusted(shooterPlayer, (Player) hitEntity)) {
                     return;
                 }
 
@@ -203,10 +203,15 @@ public class MaceListener implements Listener {
                     hitEntity.getWorld().spawnParticle(Particle.CLOUD, hitEntity.getLocation(), 15);
                     hitEntity.getWorld().spawnParticle(Particle.SMOKE, hitEntity.getLocation(), 10);
 
-                    // Send message to players
+                    // Send message to players (including the shooter if they hit themselves)
                     if (hitEntity instanceof Player) {
-                        ((Player) hitEntity).sendMessage(Component.text("💨 Pulled into the air by wind charge!")
-                                .color(NamedTextColor.GRAY));
+                        if (hitEntity == shooterPlayer) {
+                            ((Player) hitEntity).sendMessage(Component.text("💨 You pulled yourself with wind charge!")
+                                    .color(NamedTextColor.GRAY));
+                        } else {
+                            ((Player) hitEntity).sendMessage(Component.text("💨 Pulled into the air by wind charge!")
+                                    .color(NamedTextColor.GRAY));
+                        }
                     }
                 }
             }
