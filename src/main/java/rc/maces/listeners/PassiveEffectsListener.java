@@ -21,8 +21,6 @@ public class PassiveEffectsListener extends BukkitRunnable {
     private final ElementManager elementManager;
     private final TrustManager trustManager;
 
-    // REMOVED: All drowning-related code since it's been replaced with 1% mining fatigue on hit
-
     public PassiveEffectsListener(MaceManager maceManager, ElementManager elementManager, TrustManager trustManager) {
         this.maceManager = maceManager;
         this.elementManager = elementManager;
@@ -84,8 +82,6 @@ public class PassiveEffectsListener extends BukkitRunnable {
             if (player.isInWater()) {
                 player.addPotionEffect(new PotionEffect(PotionEffectType.DOLPHINS_GRACE, 40, 0, false, false));
             }
-
-            // REMOVED: Drowning effect - replaced with 1% mining fatigue chance on hit (handled in MaceListener)
         }
     }
 
@@ -102,15 +98,7 @@ public class PassiveEffectsListener extends BukkitRunnable {
             player.addPotionEffect(new PotionEffect(PotionEffectType.HERO_OF_THE_VILLAGE, 40, 0, false, false));
         }
 
-        // Suffocation immunity when holding mace
-        if (holdingMace && player.getLocation().getBlock().getType().isSolid()) {
-            for (int y = 1; y <= 10; y++) {
-                if (!player.getLocation().clone().add(0, y, 0).getBlock().getType().isSolid()) {
-                    player.teleport(player.getLocation().clone().add(0, y, 0));
-                    break;
-                }
-            }
-        }
+        // REMOVED: Suffocation immunity when holding mace (no longer included)
     }
 
     private void applyAirMacePassives(Player player, boolean holdingMace) {
@@ -120,6 +108,6 @@ public class PassiveEffectsListener extends BukkitRunnable {
         }
 
         // Air passives are mainly handled in MaceListener (fall damage immunity, etc.)
-        // Wind charge pulling is handled there too
+        // Wind charge pulling is now only handled when holding mace
     }
 }

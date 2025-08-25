@@ -14,7 +14,7 @@ import rc.maces.managers.TrustManager;
 
 import java.util.*;
 
-// REWORKED BuddyUp Ability - Summons a protective iron golem that properly defends the summoner
+// UPDATED BuddyUp Ability - Summons a protective iron golem that properly defends the summoner in 8 block range
 public class BuddyUpAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -88,7 +88,7 @@ public class BuddyUpAbility extends BaseAbility {
         }
     }
 
-    // FIXED: Handle when the player gets damaged by ANY living entity
+    // UPDATED: Handle when the player gets damaged by ANY living entity (now checks 8 block range)
     public static void handlePlayerDamage(EntityDamageByEntityEvent event, Player victim, TrustManager trustManager) {
         GolemInfo golemInfo = playerGolems.get(victim.getUniqueId());
         if (golemInfo == null || golemInfo.golem == null || golemInfo.golem.isDead()) {
@@ -97,10 +97,15 @@ public class BuddyUpAbility extends BaseAbility {
 
         IronGolem golem = golemInfo.golem;
 
+        // UPDATED: Check if golem is within 8 blocks of the victim
+        if (golem.getLocation().distance(victim.getLocation()) > 8.0) {
+            return; // Golem is too far away to help
+        }
+
         if (event.getDamager() instanceof LivingEntity) {
             LivingEntity attacker = (LivingEntity) event.getDamager();
 
-            // FIXED: Don't make golem attack its own summoner (this was the bug)
+            // Don't make golem attack its own summoner (this was the bug)
             if (attacker.getUniqueId().equals(victim.getUniqueId())) {
                 return;
             }
@@ -125,7 +130,7 @@ public class BuddyUpAbility extends BaseAbility {
         }
     }
 
-    // FIXED: Handle when a golem gets damaged - prevent it from attacking its own summoner
+    // Handle when a golem gets damaged - prevent it from attacking its own summoner
     public static void handleGolemDamage(EntityDamageByEntityEvent event, IronGolem golem, TrustManager trustManager) {
         if (!golemUUIDs.contains(golem.getUniqueId())) {
             return; // Not one of our custom golems
@@ -174,7 +179,7 @@ public class BuddyUpAbility extends BaseAbility {
         }
     }
 
-    // FIXED: Handle when summoner attacks something - make golem help
+    // UPDATED: Handle when summoner attacks something - make golem help (now checks 8 block range)
     public static void handleSummonerAttack(EntityDamageByEntityEvent event, Player summoner, TrustManager trustManager) {
         GolemInfo golemInfo = playerGolems.get(summoner.getUniqueId());
         if (golemInfo == null || golemInfo.golem == null || golemInfo.golem.isDead()) {
@@ -184,6 +189,11 @@ public class BuddyUpAbility extends BaseAbility {
         if (event.getEntity() instanceof LivingEntity) {
             LivingEntity target = (LivingEntity) event.getEntity();
             IronGolem golem = golemInfo.golem;
+
+            // UPDATED: Check if golem is within 8 blocks of the summoner
+            if (golem.getLocation().distance(summoner.getLocation()) > 8.0) {
+                return; // Golem is too far away to help
+            }
 
             // Don't attack other custom golems
             if (target instanceof IronGolem && golemUUIDs.contains(target.getUniqueId())) {

@@ -104,18 +104,18 @@ public class MaceListener implements Listener {
                     return; // Skip effects for trusted players
                 }
 
-                // Air Mace or Air element: Apply slow falling on hit
-                if (maceManager.isAirMace(weapon) || "AIR".equals(elementManager.getPlayerElement(attacker))) {
+                // UPDATED: Air Mace: Apply slow falling on hit (only when holding mace)
+                if (maceManager.isAirMace(weapon)) {
                     victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 40, 0)); // 2 seconds
                 }
 
-                // Fire Mace or Fire element: Ignite on hit
-                if (maceManager.isFireMace(weapon) || "FIRE".equals(elementManager.getPlayerElement(attacker))) {
+                // UPDATED: Fire Mace: Ignite on hit (only when holding mace)
+                if (maceManager.isFireMace(weapon)) {
                     event.getEntity().setFireTicks(100); // Ignite victim
                 }
 
-                // NEW: Water Mace or Water element: 1% chance to give Mining Fatigue 3 for 2 seconds
-                if (maceManager.isWaterMace(weapon) || "WATER".equals(elementManager.getPlayerElement(attacker))) {
+                // UPDATED: Water Mace: 1% chance to give Mining Fatigue 3 for 2 seconds (only when holding mace)
+                if (maceManager.isWaterMace(weapon)) {
                     if (random.nextInt(100) == 0) { // 1% chance (0 out of 100)
                         victim.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, 40, 2)); // 2 seconds, level 3
 
@@ -196,7 +196,7 @@ public class MaceListener implements Listener {
     public void onProjectileHit(ProjectileHitEvent event) {
         Projectile projectile = event.getEntity();
 
-        // Wind Charge pulling effect - works on ALL living entities including the shooter
+        // UPDATED: Wind Charge pulling effect - only works when shooter has Air Mace (not just air element)
         if (projectile instanceof WindCharge && event.getHitEntity() instanceof LivingEntity) {
             LivingEntity hitEntity = (LivingEntity) event.getHitEntity();
             ProjectileSource shooter = projectile.getShooter();
@@ -209,12 +209,11 @@ public class MaceListener implements Listener {
                     return;
                 }
 
-                // Check if shooter has air mace in main hand or offhand, or has air element
+                // UPDATED: Check if shooter has air mace in main hand or offhand ONLY (removed element check)
                 ItemStack mainHand = shooterPlayer.getInventory().getItemInMainHand();
                 ItemStack offHand = shooterPlayer.getInventory().getItemInOffHand();
-                String shooterElement = elementManager.getPlayerElement(shooterPlayer);
 
-                if (maceManager.isAirMace(mainHand) || maceManager.isAirMace(offHand) || "AIR".equals(shooterElement)) {
+                if (maceManager.isAirMace(mainHand) || maceManager.isAirMace(offHand)) {
                     // NERFED: Reduced pulling effect - decreased force
                     Vector direction = shooterPlayer.getLocation().toVector()
                             .subtract(hitEntity.getLocation().toVector())
@@ -251,7 +250,7 @@ public class MaceListener implements Listener {
         ItemStack mainHand = player.getInventory().getItemInMainHand();
         ItemStack offHand = player.getInventory().getItemInOffHand();
 
-        // Earth Mace: All food acts like golden apples (only when holding mace)
+        // UPDATED: Earth Mace: All food acts like golden apples (only when holding mace)
         if (maceManager.isEarthMace(mainHand) || maceManager.isEarthMace(offHand)) {
             // Apply golden apple effects (Regeneration II for 5 seconds, Absorption for 2 minutes)
             player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 1));

@@ -39,8 +39,8 @@ public class ObsidianCreationAbility extends BaseAbility {
         Map<Location, Material> originalBlocks = new HashMap<>();
         int waterConverted = 0;
 
-        // Find all entities in the area and spawn obsidian on them (except allies)
-        Collection<Entity> nearbyEntities = center.getWorld().getNearbyEntities(center, 4, 4, 4);
+        // UPDATED: Find all entities in 8 block radius and spawn obsidian on them (except allies)
+        Collection<Entity> nearbyEntities = center.getWorld().getNearbyEntities(center, 4, 4, 4); // 8 block range
         for (Entity entity : nearbyEntities) {
             if (entity instanceof LivingEntity && entity != player) {
                 LivingEntity target = (LivingEntity) entity;
@@ -52,10 +52,10 @@ public class ObsidianCreationAbility extends BaseAbility {
 
                 Location targetLoc = target.getLocation();
 
-                // Spawn obsidian at the entity's location and around them
+                // UPDATED: Spawn obsidian in a larger box (3x4x3 instead of 3x3x3)
                 for (int x = -1; x <= 1; x++) {
                     for (int z = -1; z <= 1; z++) {
-                        for (int y = 0; y <= 2; y++) {
+                        for (int y = 0; y <= 3; y++) { // INCREASED from 2 to 3 for height
                             Location obsidianLoc = targetLoc.clone().add(x, y, z);
                             Material blockType = obsidianLoc.getBlock().getType();
 
@@ -101,7 +101,8 @@ public class ObsidianCreationAbility extends BaseAbility {
 
                 // Deal damage to entities standing on obsidian blocks (that were water) every 1.5 seconds
                 if (ticks % 30 == 0) {
-                    Collection<Entity> nearby = center.getWorld().getNearbyEntities(center, 5, 5, 5);
+                    // UPDATED: Check in 8 block radius (same as initial range)
+                    Collection<Entity> nearby = center.getWorld().getNearbyEntities(center, 4, 4, 4);
                     for (Entity entity : nearby) {
                         if (entity instanceof LivingEntity && entity != player) {
                             LivingEntity target = (LivingEntity) entity;

@@ -17,7 +17,7 @@ import rc.maces.managers.TrustManager;
 
 import java.util.Collection;
 
-// WaterGeyser Ability - Launches ALL nearby living entities upwards (except allies)
+// UPDATED WaterGeyser Ability - Launches ALL nearby living entities upwards in 8 block range (except allies)
 public class WaterGeyserAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -53,9 +53,9 @@ public class WaterGeyserAbility extends BaseAbility {
                     effectLoc.getWorld().spawnParticle(Particle.BUBBLE, effectLoc, 8);
                 }
 
-                // Launch ALL living entities (players and mobs) every 5 ticks except allies
+                // UPDATED: Launch ALL living entities (players and mobs) every 5 ticks except allies in 8 block range
                 if (ticks % 5 == 0) {
-                    Collection<Entity> nearby = center.getWorld().getNearbyEntities(center, 3, 3, 3);
+                    Collection<Entity> nearby = center.getWorld().getNearbyEntities(center, 4, 4, 4); // 8 block range
                     for (Entity entity : nearby) {
                         if (entity instanceof LivingEntity && entity != player) {
                             LivingEntity target = (LivingEntity) entity;

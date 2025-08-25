@@ -18,7 +18,7 @@ import rc.maces.managers.TrustManager;
 
 import java.util.Collection;
 
-// WindStruck Ability - Creates cobwebs and applies slow falling in 5x5 area to ALL living entities (except allies)
+// UPDATED WindStruck Ability - Creates cobwebs and applies slow falling in 8x8 area to ALL living entities (except allies)
 public class WindStruckAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -37,8 +37,8 @@ public class WindStruckAbility extends BaseAbility {
         Location center = player.getLocation();
         int affectedTargets = 0;
 
-        // Apply effects to ALL living entities (players and mobs) in 5x5 area (except allies)
-        Collection<Entity> nearbyEntities = center.getWorld().getNearbyEntities(center, 2.5, 2.5, 2.5);
+        // UPDATED: Apply effects to ALL living entities (players and mobs) in 8x8 area (except allies)
+        Collection<Entity> nearbyEntities = center.getWorld().getNearbyEntities(center, 4.0, 4.0, 4.0); // 8x8 area (4 block radius)
         for (Entity entity : nearbyEntities) {
             if (entity instanceof LivingEntity && entity != player) {
                 LivingEntity target = (LivingEntity) entity;

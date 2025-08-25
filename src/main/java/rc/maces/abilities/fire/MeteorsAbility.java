@@ -19,7 +19,7 @@ import rc.maces.managers.TrustManager;
 import java.util.Collection;
 import java.util.Random;
 
-// BUFFED Meteors Ability - Drops 15 meteors in 7x7 radius with increased damage on ALL living entities (except allies)
+// UPDATED Meteors Ability - Drops 15 meteors in 8x8 radius with increased damage on ALL living entities (except allies)
 public class MeteorsAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -52,9 +52,9 @@ public class MeteorsAbility extends BaseAbility {
                     return;
                 }
 
-                // Random location in 7x7 radius
-                int randomX = random.nextInt(7) - 3;
-                int randomZ = random.nextInt(7) - 3;
+                // UPDATED: Random location in 8x8 radius (4 blocks each direction)
+                int randomX = random.nextInt(9) - 4; // -4 to +4
+                int randomZ = random.nextInt(9) - 4; // -4 to +4
 
                 Location targetLoc = center.clone().add(randomX, 0, randomZ);
                 Location meteorLoc = targetLoc.clone().add(0, 20, 0);
@@ -92,8 +92,8 @@ public class MeteorsAbility extends BaseAbility {
         targetLoc.getWorld().spawnParticle(Particle.FLAME, targetLoc, 25);
         targetLoc.getWorld().spawnParticle(Particle.LAVA, targetLoc, 10);
 
-        // Deal 3 hearts (6 damage) true damage to ALL nearby living entities (players and mobs) except allies
-        Collection<Entity> nearby = targetLoc.getWorld().getNearbyEntities(targetLoc, 3, 3, 3);
+        // UPDATED: Deal 3 hearts (6 damage) true damage to ALL nearby living entities in 8 block range (except allies)
+        Collection<Entity> nearby = targetLoc.getWorld().getNearbyEntities(targetLoc, 4, 4, 4); // 8 block range
         for (Entity entity : nearby) {
             if (entity instanceof LivingEntity && entity != caster) {
                 LivingEntity living = (LivingEntity) entity;
