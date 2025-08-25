@@ -1,7 +1,9 @@
 package rc.maces.managers;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -24,11 +26,17 @@ public class TrustManager {
         this.plugin = plugin;
         this.dataFile = new File(plugin.getDataFolder(), "trust.yml");
         this.dataConfig = YamlConfiguration.loadConfiguration(dataFile);
+
+        // Create data folder if it doesn't exist
+        if (!plugin.getDataFolder().exists()) {
+            plugin.getDataFolder().mkdirs();
+        }
+
         loadTrustData();
     }
 
     /**
-     * Sends a trust request to another player
+     * Sends a trust request to another player with clickable chat
      */
     public void sendTrustRequest(Player requester, Player target) {
         if (requester.equals(target)) {
@@ -58,22 +66,45 @@ public class TrustManager {
         requester.sendMessage(Component.text("🤝 Trust request sent to " + target.getName() + "!")
                 .color(NamedTextColor.GREEN));
 
+        // Create clickable accept and deny buttons
+        Component acceptButton = Component.text("[ACCEPT]")
+                .color(NamedTextColor.GREEN)
+                .decoration(TextDecoration.BOLD, true)
+                .clickEvent(ClickEvent.runCommand("/trustaccept"))
+                .hoverEvent(Component.text("Click to accept the trust request").color(NamedTextColor.GREEN));
+
+        Component denyButton = Component.text("[DENY]")
+                .color(NamedTextColor.RED)
+                .decoration(TextDecoration.BOLD, true)
+                .clickEvent(ClickEvent.runCommand("/trustdeny"))
+                .hoverEvent(Component.text("Click to deny the trust request").color(NamedTextColor.RED));
+
+        // Send the trust request message with clickable buttons
         target.sendMessage(Component.text("═══════════════════════════════════")
                 .color(NamedTextColor.GOLD));
         target.sendMessage(Component.text("🤝 TRUST REQUEST 🤝")
-                .color(NamedTextColor.GOLD));
+                .color(NamedTextColor.GOLD)
+                .decoration(TextDecoration.BOLD, true));
         target.sendMessage(Component.text("═══════════════════════════════════")
                 .color(NamedTextColor.GOLD));
-        target.sendMessage(Component.text(requester.getName() + " wants to trust you!")
+        target.sendMessage(Component.text(requester.getName() + " wants to become allies!")
                 .color(NamedTextColor.YELLOW));
-        target.sendMessage(Component.text("• No PvP damage between you")
+        target.sendMessage(Component.text(""));
+        target.sendMessage(Component.text("Allied players cannot:")
                 .color(NamedTextColor.GRAY));
-        target.sendMessage(Component.text("• No ability effects on each other")
+        target.sendMessage(Component.text("• Deal PvP damage to each other")
+                .color(NamedTextColor.DARK_GRAY));
+        target.sendMessage(Component.text("• Affect each other with mace abilities")
+                .color(NamedTextColor.DARK_GRAY));
+        target.sendMessage(Component.text("• Affect each other with passive effects")
+                .color(NamedTextColor.DARK_GRAY));
+        target.sendMessage(Component.text(""));
+        target.sendMessage(acceptButton.append(Component.text("  ").color(NamedTextColor.WHITE)).append(denyButton));
+        target.sendMessage(Component.text(""));
+        target.sendMessage(Component.text("Or type: /trustaccept or /trustdeny")
                 .color(NamedTextColor.GRAY));
-        target.sendMessage(Component.text("• No passive effects on each other")
-                .color(NamedTextColor.GRAY));
-        target.sendMessage(Component.text("Type '/trustaccept' to accept or '/trustdeny' to deny")
-                .color(NamedTextColor.GREEN));
+        target.sendMessage(Component.text("Request expires in 60 seconds")
+                .color(NamedTextColor.DARK_GRAY));
         target.sendMessage(Component.text("═══════════════════════════════════")
                 .color(NamedTextColor.GOLD));
 
@@ -106,7 +137,7 @@ public class TrustManager {
         }
 
         Player requester = Bukkit.getPlayer(requesterUUID);
-        if (requester == null) {
+        if (requester == null || !requester.isOnline()) {
             accepter.sendMessage(Component.text("❌ The player who sent the trust request is no longer online!")
                     .color(NamedTextColor.RED));
             pendingTrustRequests.remove(accepter.getUniqueId());
@@ -124,10 +155,21 @@ public class TrustManager {
         saveTrustData();
 
         // Send success messages
-        requester.sendMessage(Component.text("✅ " + accepter.getName() + " accepted your trust request! You are now allies!")
+        Component allyMessage = Component.text("✅ ALLIANCE FORMED! ✅")
+                .color(NamedTextColor.GREEN)
+                .decoration(TextDecoration.BOLD, true);
+
+        requester.sendMessage(allyMessage);
+        requester.sendMessage(Component.text("🤝 " + accepter.getName() + " accepted your trust request!")
                 .color(NamedTextColor.GREEN));
-        accepter.sendMessage(Component.text("✅ You accepted " + requester.getName() + "'s trust request! You are now allies!")
+        requester.sendMessage(Component.text("You are now allies and protected from each other's abilities!")
+                .color(NamedTextColor.YELLOW));
+
+        accepter.sendMessage(allyMessage);
+        accepter.sendMessage(Component.text("🤝 You accepted " + requester.getName() + "'s trust request!")
                 .color(NamedTextColor.GREEN));
+        accepter.sendMessage(Component.text("You are now allies and protected from each other's abilities!")
+                .color(NamedTextColor.YELLOW));
     }
 
     /**
@@ -154,32 +196,32 @@ public class TrustManager {
     }
 
     /**
-     * Remove trust between two players
+     * Remove trust between two players (allows either player to break the alliance)
      */
     public void removeTrust(Player remover, Player target) {
         if (!isTrusted(remover, target)) {
-            remover.sendMessage(Component.text("❌ You don't trust " + target.getName() + "!")
+            remover.sendMessage(Component.text("❌ You are not allied with " + target.getName() + "!")
                     .color(NamedTextColor.RED));
             return;
         }
 
         // Remove mutual trust
-        removeTrust(remover.getUniqueId(), target.getUniqueId());
-        removeTrust(target.getUniqueId(), remover.getUniqueId());
+        removeTrustRelation(remover.getUniqueId(), target.getUniqueId());
+        removeTrustRelation(target.getUniqueId(), remover.getUniqueId());
 
         saveTrustData();
 
-        remover.sendMessage(Component.text("💔 You no longer trust " + target.getName() + ".")
+        remover.sendMessage(Component.text("💔 Alliance with " + target.getName() + " has been broken.")
                 .color(NamedTextColor.YELLOW));
 
         if (target.isOnline()) {
-            target.sendMessage(Component.text("💔 " + remover.getName() + " no longer trusts you.")
+            target.sendMessage(Component.text("💔 " + remover.getName() + " has broken your alliance.")
                     .color(NamedTextColor.YELLOW));
         }
     }
 
     /**
-     * Check if two players trust each other
+     * Check if two players trust each other (mutual trust required)
      */
     public boolean isTrusted(Player player1, Player player2) {
         if (player1 == null || player2 == null) return false;
@@ -201,11 +243,15 @@ public class TrustManager {
                     names.add(trustedPlayer.getName());
                 } else {
                     // Try to get offline player name
-                    names.add(Bukkit.getOfflinePlayer(uuid).getName());
+                    String name = Bukkit.getOfflinePlayer(uuid).getName();
+                    if (name != null) {
+                        names.add(name + " (offline)");
+                    }
                 }
             }
         }
 
+        names.sort(String::compareToIgnoreCase);
         return names;
     }
 
@@ -220,7 +266,7 @@ public class TrustManager {
         trustRelations.computeIfAbsent(player1, k -> new HashSet<>()).add(player2);
     }
 
-    private void removeTrust(UUID player1, UUID player2) {
+    private void removeTrustRelation(UUID player1, UUID player2) {
         Set<UUID> trusted = trustRelations.get(player1);
         if (trusted != null) {
             trusted.remove(player2);

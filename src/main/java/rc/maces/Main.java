@@ -13,6 +13,7 @@ public class Main extends JavaPlugin {
     private ElementManager elementManager;
     private MaceManager maceManager;
     private RecipeManager recipeManager;
+    private TrustManager trustManager;
 
     @Override
     public void onEnable() {
@@ -21,21 +22,34 @@ public class Main extends JavaPlugin {
         elementManager = new ElementManager(this);
         maceManager = new MaceManager(this, cooldownManager);
         recipeManager = new RecipeManager(this, maceManager);
+        trustManager = new TrustManager(this);
 
-        // Register commands
+        // Register mace commands
         getCommand("airmace").setExecutor(new AirmaceCommand(maceManager));
         getCommand("firemace").setExecutor(new FiremaceCommand(maceManager));
         getCommand("watermace").setExecutor(new WatermaceCommand(maceManager));
         getCommand("earthmace").setExecutor(new EarthmaceCommand(maceManager));
+
+        // Register element commands
         getCommand("element").setExecutor(new ElementCommand(elementManager));
         getCommand("reroll").setExecutor(new RerollCommand(elementManager));
         getCommand("myelement").setExecutor(new MyElementCommand(elementManager));
         getCommand("craftedmaces").setExecutor(new CraftedMacesCommand(elementManager, maceManager));
 
+        // Register trust commands
+        getCommand("trust").setExecutor(new TrustCommand(trustManager));
+        getCommand("untrust").setExecutor(new UntrustCommand(trustManager));
+        getCommand("trustlist").setExecutor(new TrustListCommand(trustManager));
+        getCommand("trustaccept").setExecutor(new TrustAcceptCommand(trustManager));
+        getCommand("trustdeny").setExecutor(new TrustDenyCommand(trustManager));
+
         // Register event listeners
-        getServer().getPluginManager().registerEvents(new MaceListener(maceManager, elementManager), this);
-        getServer().getPluginManager().registerEvents(new CraftingListener(this, recipeManager, elementManager), this);
-        getServer().getPluginManager().registerEvents(new PlayerJoinListener(elementManager), this);
+        getServer().getPluginManager().registerEvents(
+                new MaceListener(maceManager, elementManager, trustManager), this);
+        getServer().getPluginManager().registerEvents(
+                new CraftingListener(this, recipeManager, elementManager), this);
+        getServer().getPluginManager().registerEvents(
+                new PlayerJoinListener(elementManager), this);
 
         // Register recipes
         recipeManager.registerAllRecipes();
@@ -44,20 +58,20 @@ public class Main extends JavaPlugin {
         new ActionBarTask(maceManager).runTaskTimer(this, 0L, 1L);
 
         // Start passive effects task
-        new PassiveEffectsListener(maceManager, elementManager).runTaskTimer(this, 0L, 20L); // Every second
+        new PassiveEffectsListener(maceManager, elementManager, trustManager)
+                .runTaskTimer(this, 0L, 20L); // Every second
 
+        // Plugin startup messages
         getLogger().info("Maces plugin enabled!");
         getLogger().info("Registered " + recipeManager.getRecipeCount() + " custom recipes.");
         getLogger().info("Element system initialized - players will be assigned random elements on join!");
-        getLogger().info("UPDATED: New passive effects added for all elements!");
-        getLogger().info("UPDATED: Fire Rest, Dolphin's Grace, Hero of the Village 1, Speed 1 effects!");
-        getLogger().info("UPDATED: Wind charges now pull entities when air mace is in offhand!");
-        getLogger().info("UPDATED: Meteors no longer break blocks!");
-        getLogger().info("UPDATED: Obsidian Creation cooldown back to 30s and converts water to obsidian!");
-        getLogger().info("UPDATED: Iron golems no longer attack their summoner!");
-        getLogger().info("UPDATED: Enhanced drowning effects for water mace!");
-        getLogger().info("ADDED: /myelement and /craftedmaces commands!");
-        getLogger().info("All abilities now work on both mobs and players!");
+        getLogger().info("Trust system initialized - players can now form alliances!");
+        getLogger().info("FEATURES ENABLED:");
+        getLogger().info("- Element-based passive abilities for all players");
+        getLogger().info("- Enhanced mace abilities with cooldowns");
+        getLogger().info("- Trust/alliance system with PvP protection");
+        getLogger().info("- Element-restricted crafting system");
+        getLogger().info("- Real-time ability status display");
     }
 
     @Override
@@ -68,9 +82,13 @@ public class Main extends JavaPlugin {
         if (elementManager != null) {
             elementManager.saveAllData();
         }
+        if (trustManager != null) {
+            trustManager.saveAllData();
+        }
         getLogger().info("Maces plugin disabled!");
     }
 
+    // Getters for managers
     public CooldownManager getCooldownManager() {
         return cooldownManager;
     }
@@ -85,5 +103,9 @@ public class Main extends JavaPlugin {
 
     public RecipeManager getRecipeManager() {
         return recipeManager;
+    }
+
+    public TrustManager getTrustManager() {
+        return trustManager;
     }
 }

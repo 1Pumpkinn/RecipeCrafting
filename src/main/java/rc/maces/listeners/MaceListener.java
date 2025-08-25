@@ -22,15 +22,18 @@ import rc.maces.abilities.AbilityManager;
 import rc.maces.abilities.earth.BuddyUpAbility;
 import rc.maces.managers.ElementManager;
 import rc.maces.managers.MaceManager;
+import rc.maces.managers.TrustManager;
 
 public class MaceListener implements Listener {
 
     private final MaceManager maceManager;
     private final ElementManager elementManager;
+    private final TrustManager trustManager;
 
-    public MaceListener(MaceManager maceManager, ElementManager elementManager) {
+    public MaceListener(MaceManager maceManager, ElementManager elementManager, TrustManager trustManager) {
         this.maceManager = maceManager;
         this.elementManager = elementManager;
+        this.trustManager = trustManager;
     }
 
     @EventHandler
@@ -77,18 +80,35 @@ public class MaceListener implements Listener {
             Player attacker = (Player) event.getDamager();
             ItemStack weapon = attacker.getInventory().getItemInMainHand();
 
-            // Air Mace or Air element: Apply slow falling on hit to ALL living entities
-            if (event.getEntity() instanceof LivingEntity) {
-                LivingEntity victim = (LivingEntity) event.getEntity();
-
-                if (maceManager.isAirMace(weapon) || "AIR".equals(elementManager.getPlayerElement(attacker))) {
-                    victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 40, 0)); // 2 seconds
+            // Check trust system - prevent PvP damage between trusted players
+            if (event.getEntity() instanceof Player) {
+                Player victim = (Player) event.getEntity();
+                if (trustManager.isTrusted(attacker, victim)) {
+                    event.setCancelled(true);
+                    attacker.sendMessage(Component.text("🤝 You cannot attack your ally " + victim.getName() + "!")
+                            .color(NamedTextColor.YELLOW));
+                    return;
                 }
             }
 
-            // Fire Mace or Fire element: Ignite on hit (ALL living entities)
-            if (maceManager.isFireMace(weapon) || "FIRE".equals(elementManager.getPlayerElement(attacker))) {
-                event.getEntity().setFireTicks(100); // Ignite victim
+            // Apply mace effects to living entities (but respect trust for players)
+            if (event.getEntity() instanceof LivingEntity) {
+                LivingEntity victim = (LivingEntity) event.getEntity();
+
+                // Check trust for player victims
+                if (victim instanceof Player && trustManager.isTrusted(attacker, (Player) victim)) {
+                    return; // Skip effects for trusted players
+                }
+
+                // Air Mace or Air element: Apply slow falling on hit
+                if (maceManager.isAirMace(weapon) || "AIR".equals(elementManager.getPlayerElement(attacker))) {
+                    victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 40, 0)); // 2 seconds
+                }
+
+                // Fire Mace or Fire element: Ignite on hit
+                if (maceManager.isFireMace(weapon) || "FIRE".equals(elementManager.getPlayerElement(attacker))) {
+                    event.getEntity().setFireTicks(100); // Ignite victim
+                }
             }
         }
 
@@ -130,7 +150,7 @@ public class MaceListener implements Listener {
         ItemStack offHand = player.getInventory().getItemInOffHand();
         String playerElement = elementManager.getPlayerElement(player);
 
-        // Air Mace: Fall damage immunity (holding mace or air element role)
+        // Air Mace: Fall damage immunity (holding mace or air element)
         if (event.getCause() == EntityDamageEvent.DamageCause.FALL &&
                 (maceManager.isAirMace(mainHand) || maceManager.isAirMace(offHand) || "AIR".equals(playerElement))) {
             event.setCancelled(true);
@@ -157,6 +177,11 @@ public class MaceListener implements Listener {
             if (shooter instanceof Player) {
                 Player shooterPlayer = (Player) shooter;
 
+                // Check trust system - don't affect trusted players
+                if (hitEntity instanceof Player && trustManager.isTrusted(shooterPlayer, (Player) hitEntity)) {
+                    return;
+                }
+
                 // Check if shooter has air mace in main hand or offhand, or has air element
                 ItemStack mainHand = shooterPlayer.getInventory().getItemInMainHand();
                 ItemStack offHand = shooterPlayer.getInventory().getItemInOffHand();
@@ -173,11 +198,11 @@ public class MaceListener implements Listener {
                     direction.setY(1.2); // Pull entities up into the air
 
                     hitEntity.setVelocity(direction);
-                    
+
                     // Add visual effects for the pull
                     hitEntity.getWorld().spawnParticle(Particle.CLOUD, hitEntity.getLocation(), 15);
                     hitEntity.getWorld().spawnParticle(Particle.SMOKE, hitEntity.getLocation(), 10);
-                    
+
                     // Send message to players
                     if (hitEntity instanceof Player) {
                         ((Player) hitEntity).sendMessage(Component.text("💨 Pulled into the air by wind charge!")

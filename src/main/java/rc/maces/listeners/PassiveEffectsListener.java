@@ -11,6 +11,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import rc.maces.managers.ElementManager;
 import rc.maces.managers.MaceManager;
+import rc.maces.managers.TrustManager;
 
 import java.util.Collection;
 
@@ -18,10 +19,12 @@ public class PassiveEffectsListener extends BukkitRunnable {
 
     private final MaceManager maceManager;
     private final ElementManager elementManager;
+    private final TrustManager trustManager;
 
-    public PassiveEffectsListener(MaceManager maceManager, ElementManager elementManager) {
+    public PassiveEffectsListener(MaceManager maceManager, ElementManager elementManager, TrustManager trustManager) {
         this.maceManager = maceManager;
         this.elementManager = elementManager;
+        this.trustManager = trustManager;
     }
 
     @Override
@@ -87,6 +90,11 @@ public class PassiveEffectsListener extends BukkitRunnable {
             for (Entity entity : nearby) {
                 if (entity instanceof LivingEntity && entity != player) {
                     LivingEntity target = (LivingEntity) entity;
+
+                    // Check trust system - don't affect trusted players
+                    if (target instanceof Player && trustManager.isTrusted(player, (Player) target)) {
+                        continue;
+                    }
 
                     // Apply drowning effect - reduce air and damage when air runs out
                     if (target instanceof Player) {

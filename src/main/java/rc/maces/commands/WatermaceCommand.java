@@ -1,4 +1,3 @@
-// WatermaceCommand.java
 package rc.maces.commands;
 
 import net.kyori.adventure.text.Component;
@@ -41,9 +40,9 @@ public class WatermaceCommand implements CommandExecutor {
 
         maceManager.giveWaterMace(target);
         sender.sendMessage(Component.text("You have given " + target.getName() + " the Water Mace!")
-                .color(NamedTextColor.DARK_BLUE));
+                .color(NamedTextColor.LIGHT_PURPLE));
         target.sendMessage(Component.text("You have been given the Water Mace!")
-                .color(NamedTextColor.DARK_BLUE));
+                .color(NamedTextColor.LIGHT_PURPLE));
 
         return true;
     }
