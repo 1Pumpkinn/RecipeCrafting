@@ -81,34 +81,30 @@ public class PassiveEffectsListener extends BukkitRunnable {
             }
         }
 
-        // Enhanced drowning effect for nearby living entities in 4x4 area - works anywhere, not just in water
-        Collection<Entity> nearby = player.getWorld().getNearbyEntities(player.getLocation(), 2, 2, 2);
-        for (Entity entity : nearby) {
-            if (entity instanceof LivingEntity && entity != player) {
-                LivingEntity target = (LivingEntity) entity;
+        // Drowning effect for nearby living entities in 4x4 area - works anywhere
+        if (holdingMace || "WATER".equals(elementManager.getPlayerElement(player))) {
+            Collection<Entity> nearby = player.getWorld().getNearbyEntities(player.getLocation(), 2, 2, 2);
+            for (Entity entity : nearby) {
+                if (entity instanceof LivingEntity && entity != player) {
+                    LivingEntity target = (LivingEntity) entity;
 
-                // Apply drowning effect regardless of water location - water mace creates water aura
-                if (target instanceof Player) {
-                    Player targetPlayer = (Player) target;
-                    // Remove water breathing and reduce air for players
-                    targetPlayer.removePotionEffect(PotionEffectType.WATER_BREATHING);
-                    if (targetPlayer.getRemainingAir() > 0) {
-                        targetPlayer.setRemainingAir(Math.max(0, targetPlayer.getRemainingAir() - 60));
-                    }
-                } else {
-                    // For mobs, simulate drowning by reducing air directly
-                    if (target.getMaximumAir() > 0) {
-                        int currentAir = target.getRemainingAir();
-                        if (currentAir > 0) {
-                            target.setRemainingAir(Math.max(0, currentAir - 80));
+                    // Apply drowning effect - reduce air and damage when air runs out
+                    if (target instanceof Player) {
+                        Player targetPlayer = (Player) target;
+                        // Remove any water breathing effect first
+                        targetPlayer.removePotionEffect(PotionEffectType.WATER_BREATHING);
+                        if (targetPlayer.getRemainingAir() > 0) {
+                            targetPlayer.setRemainingAir(Math.max(0, targetPlayer.getRemainingAir() - 60));
                         } else {
-                            target.damage(2.0); // Increased drowning damage
+                            targetPlayer.damage(2.0); // Drowning damage
                         }
                     } else {
-                        // For mobs that don't naturally drown, apply stronger effects
-                        target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 40, 2, false, false));
-                        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, 1, false, false));
-                        target.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 40, 0, false, false));
+                        // For mobs - reduce air and damage
+                        if (target.getRemainingAir() > 0) {
+                            target.setRemainingAir(Math.max(0, target.getRemainingAir() - 80));
+                        } else {
+                            target.damage(2.0); // Drowning damage
+                        }
                     }
                 }
             }
@@ -142,7 +138,7 @@ public class PassiveEffectsListener extends BukkitRunnable {
         if (holdingMace || "AIR".equals(elementManager.getPlayerElement(player))) {
             player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 40, 0, false, false));
         }
-        
+
         // Air passives are mainly handled in MaceListener (fall damage immunity, etc.)
         // Wind charge pulling is handled there too
     }
