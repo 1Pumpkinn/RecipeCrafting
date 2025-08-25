@@ -21,8 +21,21 @@ public class PassiveEffectsListener extends BukkitRunnable {
     private final ElementManager elementManager;
     private final TrustManager trustManager;
 
-    // Track entities that were previously drowning to know when they escape
-    private final Map<UUID, Set<UUID>> previouslyDrowningEntities = new HashMap<>();
+    // Track entities that are currently in drowning areas and their air drain progress
+    private final Map<UUID, Map<UUID, DrownData>> playerDrowningTargets = new HashMap<>();
+
+    // Helper class to track drowning progress
+    private static class DrownData {
+        long firstEntered;
+        int airDrainLevel;
+        long lastDamage;
+
+        DrownData() {
+            this.firstEntered = System.currentTimeMillis();
+            this.airDrainLevel = 0;
+            this.lastDamage = 0;
+        }
+    }
 
     public PassiveEffectsListener(MaceManager maceManager, ElementManager elementManager, TrustManager trustManager) {
         this.maceManager = maceManager;
@@ -87,10 +100,15 @@ public class PassiveEffectsListener extends BukkitRunnable {
             }
         }
 
-        // FIXED drowning effect for nearby living entities in 4x4 area - FIXED BUBBLE ISSUE
+        // FIXED drowning effect for nearby living entities in 4x4 area
         if (holdingMace || "WATER".equals(elementManager.getPlayerElement(player))) {
             Collection<Entity> nearby = player.getWorld().getNearbyEntities(player.getLocation(), 2, 2, 2);
-            Set<UUID> currentlyDrowningEntities = new HashSet<>();
+            Set<UUID> currentlyInRange = new HashSet<>();
+
+            // Get or create the drowning targets map for this water player
+            Map<UUID, DrownData> drownTargets = playerDrowningTargets.computeIfAbsent(player.getUniqueId(), k -> new HashMap<>());
+
+            long currentTime = System.currentTimeMillis();
 
             for (Entity entity : nearby) {
                 if (entity instanceof LivingEntity && entity != player) {
@@ -101,48 +119,60 @@ public class PassiveEffectsListener extends BukkitRunnable {
                         continue;
                     }
 
-                    currentlyDrowningEntities.add(target.getUniqueId());
+                    UUID targetId = target.getUniqueId();
+                    currentlyInRange.add(targetId);
 
-                    // Apply drowning effect - FIXED: Set air to 0 to prevent bubbles and force immediate drowning damage
-                    if (target instanceof Player) {
-                        Player targetPlayer = (Player) target;
-                        // Remove any water breathing effect first
-                        targetPlayer.removePotionEffect(PotionEffectType.WATER_BREATHING);
-                        // FIXED: Set air to 0 to prevent bubble regeneration and cause immediate drowning
-                        targetPlayer.setRemainingAir(0);
-                        // Deal drowning damage directly
-                        targetPlayer.damage(2.0);
-                    } else {
-                        // For mobs - set air to 0 and damage
-                        target.setRemainingAir(0);
+                    // Get or create drown data for this target
+                    DrownData drownData = drownTargets.computeIfAbsent(targetId, k -> new DrownData());
+
+                    // Only start drowning process after being in range for 2 seconds (grace period)
+                    long timeInRange = currentTime - drownData.firstEntered;
+                    if (timeInRange < 2000) {
+                        continue; // Still in grace period
+                    }
+
+                    // Progressive air drain - start slow, get faster
+                    int targetAirLevel;
+                    if (timeInRange < 4000) { // 2-4 seconds: slow drain
+                        targetAirLevel = 200; // About 2/3 air
+                    } else if (timeInRange < 6000) { // 4-6 seconds: medium drain
+                        targetAirLevel = 100; // About 1/3 air
+                    } else { // 6+ seconds: full drowning
+                        targetAirLevel = 0; // No air, taking damage
+                    }
+
+                    // Apply air level
+                    target.setRemainingAir(targetAirLevel);
+
+                    // Only deal damage when air is 0 and enough time has passed since last damage
+                    if (targetAirLevel == 0 && (currentTime - drownData.lastDamage) >= 1000) {
                         target.damage(2.0);
+                        drownData.lastDamage = currentTime;
                     }
                 }
             }
 
-            // Get previously drowning entities for this water player
-            Set<UUID> previouslyDrowning = previouslyDrowningEntities.getOrDefault(player.getUniqueId(), new HashSet<>());
+            // Handle entities that left the drowning area
+            Set<UUID> entitiesWhoLeft = new HashSet<>(drownTargets.keySet());
+            entitiesWhoLeft.removeAll(currentlyInRange);
 
-            // Find entities that are no longer in range (escaped drowning area)
-            Set<UUID> escapedEntities = new HashSet<>(previouslyDrowning);
-            escapedEntities.removeAll(currentlyDrowningEntities);
-
-            // Restore air for entities that escaped the drowning area
-            for (UUID escapedUUID : escapedEntities) {
-                Entity escapedEntity = player.getWorld().getEntity(escapedUUID);
-                if (escapedEntity instanceof LivingEntity) {
-                    LivingEntity escapedLiving = (LivingEntity) escapedEntity;
-                    // Gradually restore air when out of drowning range
-                    int currentAir = escapedLiving.getRemainingAir();
-                    int maxAir = escapedLiving.getMaximumAir();
+            // Remove entities that left and restore their air gradually
+            for (UUID leftEntityId : entitiesWhoLeft) {
+                Entity leftEntity = player.getWorld().getEntity(leftEntityId);
+                if (leftEntity instanceof LivingEntity) {
+                    LivingEntity leftTarget = (LivingEntity) leftEntity;
+                    // Restore air gradually when they escape
+                    int currentAir = leftTarget.getRemainingAir();
+                    int maxAir = leftTarget.getMaximumAir();
                     if (currentAir < maxAir) {
-                        escapedLiving.setRemainingAir(Math.min(maxAir, currentAir + 100));
+                        leftTarget.setRemainingAir(Math.min(maxAir, currentAir + 50)); // Gradual restoration
                     }
                 }
+                drownTargets.remove(leftEntityId);
             }
-
-            // Update the tracking set
-            previouslyDrowningEntities.put(player.getUniqueId(), currentlyDrowningEntities);
+        } else {
+            // If player doesn't have water abilities anymore, clear their drowning targets
+            playerDrowningTargets.remove(player.getUniqueId());
         }
     }
 
