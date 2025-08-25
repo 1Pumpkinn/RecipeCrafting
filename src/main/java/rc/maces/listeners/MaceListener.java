@@ -110,12 +110,15 @@ public class MaceListener implements Listener {
                     event.getEntity().setFireTicks(100); // Ignite victim
                 }
             }
+
+            // FIXED: Handle when summoner attacks something - make golem help
+            BuddyUpAbility.handleSummonerAttack(event, attacker, trustManager);
         }
 
         // Handle golem damage to prevent attacking summoner
         if (event.getEntity() instanceof IronGolem) {
             IronGolem golem = (IronGolem) event.getEntity();
-            BuddyUpAbility.handleGolemDamage(event, golem);
+            BuddyUpAbility.handleGolemDamage(event, golem, trustManager);
         }
 
         // Handle golem protection for any living entity attacking a player
@@ -127,7 +130,7 @@ public class MaceListener implements Listener {
             if (!(damager instanceof IronGolem &&
                     damager.getCustomName() != null &&
                     damager.getCustomName().contains(victim.getName()))) {
-                BuddyUpAbility.handlePlayerDamage(event, victim);
+                BuddyUpAbility.handlePlayerDamage(event, victim, trustManager);
             }
         }
     }
@@ -188,14 +191,14 @@ public class MaceListener implements Listener {
                 String shooterElement = elementManager.getPlayerElement(shooterPlayer);
 
                 if (maceManager.isAirMace(mainHand) || maceManager.isAirMace(offHand) || "AIR".equals(shooterElement)) {
-                    // Enhanced pulling effect for air mace/element - pull entities into the air towards the player
+                    // STRONGER pulling effect for air mace/element - increased force
                     Vector direction = shooterPlayer.getLocation().toVector()
                             .subtract(hitEntity.getLocation().toVector())
                             .normalize()
-                            .multiply(2.5); // Strong pull force
+                            .multiply(3.5); // Increased from 2.5 to 3.5 for stronger pull
 
-                    // Strong upward component to pull entities into the air
-                    direction.setY(1.2); // Pull entities up into the air
+                    // Stronger upward component to pull entities into the air
+                    direction.setY(1.8); // Increased from 1.2 to 1.8 for stronger upward pull
 
                     hitEntity.setVelocity(direction);
 

@@ -13,17 +13,20 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 import rc.maces.abilities.BaseAbility;
 import rc.maces.managers.CooldownManager;
+import rc.maces.managers.TrustManager;
 
 import java.util.Collection;
 
-// WaterGeyser Ability - Launches ALL nearby living entities upwards
+// WaterGeyser Ability - Launches ALL nearby living entities upwards (except allies)
 public class WaterGeyserAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
+    private final TrustManager trustManager;
 
-    public WaterGeyserAbility(CooldownManager cooldownManager, JavaPlugin plugin) {
+    public WaterGeyserAbility(CooldownManager cooldownManager, JavaPlugin plugin, TrustManager trustManager) {
         super("water_geyser", 30, cooldownManager);
         this.plugin = plugin;
+        this.trustManager = trustManager;
     }
 
     @Override
@@ -50,12 +53,18 @@ public class WaterGeyserAbility extends BaseAbility {
                     effectLoc.getWorld().spawnParticle(Particle.BUBBLE, effectLoc, 8);
                 }
 
-                // Launch ALL living entities (players and mobs) every 5 ticks
+                // Launch ALL living entities (players and mobs) every 5 ticks except allies
                 if (ticks % 5 == 0) {
                     Collection<Entity> nearby = center.getWorld().getNearbyEntities(center, 3, 3, 3);
                     for (Entity entity : nearby) {
                         if (entity instanceof LivingEntity && entity != player) {
                             LivingEntity target = (LivingEntity) entity;
+
+                            // Check trust system - don't launch trusted players
+                            if (target instanceof Player && trustManager.isTrusted(player, (Player) target)) {
+                                continue;
+                            }
+
                             target.setVelocity(new Vector(0, 3.0, 0));
 
                             // Send message only to players

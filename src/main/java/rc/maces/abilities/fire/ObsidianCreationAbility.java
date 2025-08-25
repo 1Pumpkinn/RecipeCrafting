@@ -14,6 +14,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 import rc.maces.abilities.BaseAbility;
 import rc.maces.managers.CooldownManager;
+import rc.maces.managers.TrustManager;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -22,10 +23,12 @@ import java.util.Map;
 public class ObsidianCreationAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
+    private final TrustManager trustManager;
 
-    public ObsidianCreationAbility(CooldownManager cooldownManager, JavaPlugin plugin) {
+    public ObsidianCreationAbility(CooldownManager cooldownManager, JavaPlugin plugin, TrustManager trustManager) {
         super("obsidian_creation", 30, cooldownManager);
         this.plugin = plugin;
+        this.trustManager = trustManager;
     }
 
     @Override
@@ -36,20 +39,26 @@ public class ObsidianCreationAbility extends BaseAbility {
         Map<Location, Material> originalBlocks = new HashMap<>();
         int waterConverted = 0;
 
-        // Find all entities in the area and spawn obsidian on them
+        // Find all entities in the area and spawn obsidian on them (except allies)
         Collection<Entity> nearbyEntities = center.getWorld().getNearbyEntities(center, 4, 4, 4);
         for (Entity entity : nearbyEntities) {
             if (entity instanceof LivingEntity && entity != player) {
                 LivingEntity target = (LivingEntity) entity;
+
+                // Check trust system - don't trap trusted players
+                if (target instanceof Player && trustManager.isTrusted(player, (Player) target)) {
+                    continue;
+                }
+
                 Location targetLoc = target.getLocation();
-                
+
                 // Spawn obsidian at the entity's location and around them
                 for (int x = -1; x <= 1; x++) {
                     for (int z = -1; z <= 1; z++) {
                         for (int y = 0; y <= 2; y++) {
                             Location obsidianLoc = targetLoc.clone().add(x, y, z);
                             Material blockType = obsidianLoc.getBlock().getType();
-                            
+
                             // Only replace air, water, or lava blocks
                             if (blockType == Material.AIR || blockType == Material.WATER || blockType == Material.LAVA) {
                                 originalBlocks.put(obsidianLoc.clone(), blockType);
@@ -96,6 +105,12 @@ public class ObsidianCreationAbility extends BaseAbility {
                     for (Entity entity : nearby) {
                         if (entity instanceof LivingEntity && entity != player) {
                             LivingEntity target = (LivingEntity) entity;
+
+                            // Check trust system - don't damage trusted players
+                            if (target instanceof Player && trustManager.isTrusted(player, (Player) target)) {
+                                continue;
+                            }
+
                             Location targetLoc = target.getLocation();
 
                             // Check if entity is standing on converted obsidian

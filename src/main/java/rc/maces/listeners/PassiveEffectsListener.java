@@ -13,13 +13,16 @@ import rc.maces.managers.ElementManager;
 import rc.maces.managers.MaceManager;
 import rc.maces.managers.TrustManager;
 
-import java.util.Collection;
+import java.util.*;
 
 public class PassiveEffectsListener extends BukkitRunnable {
 
     private final MaceManager maceManager;
     private final ElementManager elementManager;
     private final TrustManager trustManager;
+
+    // Track entities that were previously drowning to know when they escape
+    private final Map<UUID, Set<UUID>> previouslyDrowningEntities = new HashMap<>();
 
     public PassiveEffectsListener(MaceManager maceManager, ElementManager elementManager, TrustManager trustManager) {
         this.maceManager = maceManager;
@@ -84,9 +87,11 @@ public class PassiveEffectsListener extends BukkitRunnable {
             }
         }
 
-        // Drowning effect for nearby living entities in 4x4 area - works anywhere
+        // FIXED drowning effect for nearby living entities in 4x4 area
         if (holdingMace || "WATER".equals(elementManager.getPlayerElement(player))) {
             Collection<Entity> nearby = player.getWorld().getNearbyEntities(player.getLocation(), 2, 2, 2);
+            Set<UUID> currentlyDrowningEntities = new HashSet<>();
+
             for (Entity entity : nearby) {
                 if (entity instanceof LivingEntity && entity != player) {
                     LivingEntity target = (LivingEntity) entity;
@@ -95,6 +100,8 @@ public class PassiveEffectsListener extends BukkitRunnable {
                     if (target instanceof Player && trustManager.isTrusted(player, (Player) target)) {
                         continue;
                     }
+
+                    currentlyDrowningEntities.add(target.getUniqueId());
 
                     // Apply drowning effect - reduce air and damage when air runs out
                     if (target instanceof Player) {
@@ -116,6 +123,30 @@ public class PassiveEffectsListener extends BukkitRunnable {
                     }
                 }
             }
+
+            // Get previously drowning entities for this water player
+            Set<UUID> previouslyDrowning = previouslyDrowningEntities.getOrDefault(player.getUniqueId(), new HashSet<>());
+
+            // Find entities that are no longer in range (escaped drowning area)
+            Set<UUID> escapedEntities = new HashSet<>(previouslyDrowning);
+            escapedEntities.removeAll(currentlyDrowningEntities);
+
+            // Restore air for entities that escaped the drowning area
+            for (UUID escapedUUID : escapedEntities) {
+                Entity escapedEntity = player.getWorld().getEntity(escapedUUID);
+                if (escapedEntity instanceof LivingEntity) {
+                    LivingEntity escapedLiving = (LivingEntity) escapedEntity;
+                    // Gradually restore air when out of drowning range
+                    int currentAir = escapedLiving.getRemainingAir();
+                    int maxAir = escapedLiving.getMaximumAir();
+                    if (currentAir < maxAir) {
+                        escapedLiving.setRemainingAir(Math.min(maxAir, currentAir + 100));
+                    }
+                }
+            }
+
+            // Update the tracking set
+            previouslyDrowningEntities.put(player.getUniqueId(), currentlyDrowningEntities);
         }
     }
 

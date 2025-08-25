@@ -14,19 +14,22 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 import rc.maces.abilities.BaseAbility;
 import rc.maces.managers.CooldownManager;
+import rc.maces.managers.TrustManager;
 
 import java.util.Collection;
 import java.util.Random;
 
-// BUFFED Meteors Ability - Drops 15 meteors in 7x7 radius with increased damage on ALL living entities
+// BUFFED Meteors Ability - Drops 15 meteors in 7x7 radius with increased damage on ALL living entities (except allies)
 public class MeteorsAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
+    private final TrustManager trustManager;
     private final Random random = new Random();
 
-    public MeteorsAbility(CooldownManager cooldownManager, JavaPlugin plugin) {
+    public MeteorsAbility(CooldownManager cooldownManager, JavaPlugin plugin, TrustManager trustManager) {
         super("meteors", 25, cooldownManager);
         this.plugin = plugin;
+        this.trustManager = trustManager;
     }
 
     @Override
@@ -89,11 +92,16 @@ public class MeteorsAbility extends BaseAbility {
         targetLoc.getWorld().spawnParticle(Particle.FLAME, targetLoc, 25);
         targetLoc.getWorld().spawnParticle(Particle.LAVA, targetLoc, 10);
 
-        // Deal 3 hearts (6 damage) true damage to ALL nearby living entities (players and mobs)
+        // Deal 3 hearts (6 damage) true damage to ALL nearby living entities (players and mobs) except allies
         Collection<Entity> nearby = targetLoc.getWorld().getNearbyEntities(targetLoc, 3, 3, 3);
         for (Entity entity : nearby) {
             if (entity instanceof LivingEntity && entity != caster) {
                 LivingEntity living = (LivingEntity) entity;
+
+                // Check trust system - don't damage trusted players
+                if (living instanceof Player && trustManager.isTrusted(caster, (Player) living)) {
+                    continue;
+                }
 
                 // True damage - bypass armor/resistance for ALL living entities
                 double newHealth = Math.max(0, living.getHealth() - 6.0);

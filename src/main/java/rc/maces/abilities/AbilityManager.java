@@ -12,6 +12,7 @@ import rc.maces.abilities.water.WaterGeyserAbility;
 import rc.maces.abilities.water.WaterHealAbility;
 import rc.maces.managers.CooldownManager;
 import rc.maces.managers.MaceManager;
+import rc.maces.managers.TrustManager;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,24 +22,24 @@ public class AbilityManager {
     private final Map<String, BaseAbility> abilities;
     private final MaceManager maceManager;
 
-    public AbilityManager(JavaPlugin plugin, CooldownManager cooldownManager, MaceManager maceManager) {
+    public AbilityManager(JavaPlugin plugin, CooldownManager cooldownManager, MaceManager maceManager, TrustManager trustManager) {
         this.abilities = new HashMap<>();
         this.maceManager = maceManager;
 
-        // Register all abilities
+        // Register all abilities with TrustManager
 
-        //AIR
+        //AIR - WindShotAbility only needs cooldownManager
         registerAbility(new WindShotAbility(cooldownManager));
-        registerAbility(new WindStruckAbility(cooldownManager, plugin));
+        registerAbility(new WindStruckAbility(cooldownManager, plugin, trustManager));
         //FIRE
-        registerAbility(new ObsidianCreationAbility(cooldownManager, plugin));
-        registerAbility(new MeteorsAbility(cooldownManager, plugin));
-        //WATER
+        registerAbility(new ObsidianCreationAbility(cooldownManager, plugin, trustManager));
+        registerAbility(new MeteorsAbility(cooldownManager, plugin, trustManager));
+        //WATER - WaterHealAbility only needs cooldownManager
         registerAbility(new WaterHealAbility(cooldownManager));
-        registerAbility(new WaterGeyserAbility(cooldownManager, plugin));
+        registerAbility(new WaterGeyserAbility(cooldownManager, plugin, trustManager));
         //EARTH
-        registerAbility(new BuddyUpAbility(cooldownManager, plugin));
-        registerAbility(new VinePullAbility(cooldownManager, plugin));
+        registerAbility(new BuddyUpAbility(cooldownManager, plugin, trustManager));
+        registerAbility(new VinePullAbility(cooldownManager, plugin, trustManager));
     }
 
     private void registerAbility(BaseAbility ability) {

@@ -17,12 +17,12 @@ public class Main extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        // Initialize managers
+        // Initialize managers in correct order (TrustManager before MaceManager)
         cooldownManager = new CooldownManager();
         elementManager = new ElementManager(this);
-        maceManager = new MaceManager(this, cooldownManager);
-        recipeManager = new RecipeManager(this, maceManager);
         trustManager = new TrustManager(this);
+        maceManager = new MaceManager(this, cooldownManager, trustManager); // FIXED: Added trustManager parameter
+        recipeManager = new RecipeManager(this, maceManager);
 
         // Register mace commands
         getCommand("airmace").setExecutor(new AirmaceCommand(maceManager));

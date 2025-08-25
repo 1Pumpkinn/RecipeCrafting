@@ -10,19 +10,33 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import rc.maces.abilities.BaseAbility;
 import rc.maces.managers.CooldownManager;
+import rc.maces.managers.TrustManager;
 
 import java.util.*;
 
-// BuddyUp Ability - Summons a protective iron golem that attacks enemies of the summoner
+// REWORKED BuddyUp Ability - Summons a protective iron golem that properly defends the summoner
 public class BuddyUpAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
-    private static final Map<UUID, IronGolem> playerGolems = new HashMap<>();
+    private final TrustManager trustManager;
+    private static final Map<UUID, GolemInfo> playerGolems = new HashMap<>();
     private static final Set<UUID> golemUUIDs = new HashSet<>();
 
-    public BuddyUpAbility(CooldownManager cooldownManager, JavaPlugin plugin) {
+    // Helper class to store golem information
+    private static class GolemInfo {
+        final IronGolem golem;
+        final UUID summonerUUID;
+
+        GolemInfo(IronGolem golem, UUID summonerUUID) {
+            this.golem = golem;
+            this.summonerUUID = summonerUUID;
+        }
+    }
+
+    public BuddyUpAbility(CooldownManager cooldownManager, JavaPlugin plugin, TrustManager trustManager) {
         super("buddy_up", 15, cooldownManager);
         this.plugin = plugin;
+        this.trustManager = trustManager;
     }
 
     @Override
@@ -42,12 +56,13 @@ public class BuddyUpAbility extends BaseAbility {
         // Make it protect the player
         golem.setCustomName("§a" + player.getName() + "'s Buddy");
         golem.setCustomNameVisible(true);
-        
-        // Make the golem not target its summoner
+
+        // Make the golem not target its summoner initially
         golem.setTarget(null);
 
-        // Store both the golem reference and its UUID to track it
-        playerGolems.put(player.getUniqueId(), golem);
+        // Store the golem with summoner info
+        GolemInfo golemInfo = new GolemInfo(golem, player.getUniqueId());
+        playerGolems.put(player.getUniqueId(), golemInfo);
         golemUUIDs.add(golem.getUniqueId());
 
         player.sendMessage(Component.text("🤖 BUDDY UP! Your iron golem protector has arrived!")
@@ -66,21 +81,27 @@ public class BuddyUpAbility extends BaseAbility {
     }
 
     private void removeExistingGolem(Player player) {
-        IronGolem existingGolem = playerGolems.remove(player.getUniqueId());
-        if (existingGolem != null && !existingGolem.isDead()) {
-            golemUUIDs.remove(existingGolem.getUniqueId());
-            existingGolem.remove();
+        GolemInfo existingGolemInfo = playerGolems.remove(player.getUniqueId());
+        if (existingGolemInfo != null && existingGolemInfo.golem != null && !existingGolemInfo.golem.isDead()) {
+            golemUUIDs.remove(existingGolemInfo.golem.getUniqueId());
+            existingGolemInfo.golem.remove();
         }
     }
 
-    // Handle when the player gets damaged by ANY living entity
-    public static void handlePlayerDamage(EntityDamageByEntityEvent event, Player victim) {
-        IronGolem golem = playerGolems.get(victim.getUniqueId());
-        if (golem != null && !golem.isDead() && event.getDamager() instanceof LivingEntity) {
+    // FIXED: Handle when the player gets damaged by ANY living entity
+    public static void handlePlayerDamage(EntityDamageByEntityEvent event, Player victim, TrustManager trustManager) {
+        GolemInfo golemInfo = playerGolems.get(victim.getUniqueId());
+        if (golemInfo == null || golemInfo.golem == null || golemInfo.golem.isDead()) {
+            return;
+        }
+
+        IronGolem golem = golemInfo.golem;
+
+        if (event.getDamager() instanceof LivingEntity) {
             LivingEntity attacker = (LivingEntity) event.getDamager();
 
-            // Don't make golem attack its own summoner
-            if (attacker.equals(victim)) {
+            // FIXED: Don't make golem attack its own summoner (this was the bug)
+            if (attacker.getUniqueId().equals(victim.getUniqueId())) {
                 return;
             }
 
@@ -89,36 +110,95 @@ public class BuddyUpAbility extends BaseAbility {
                 return;
             }
 
-            // Don't make golem attack the summoner even if they're attacking someone else
-            if (attacker.equals(victim)) {
+            // Check trust system - don't attack trusted players
+            if (attacker instanceof Player && trustManager.isTrusted(victim, (Player) attacker)) {
                 return;
             }
 
             // Make golem target the attacker
             golem.setTarget(attacker);
+
+            // Make sure golem is aggressive towards the target
+            if (attacker instanceof Player) {
+                golem.setAggressive(true);
+            }
         }
     }
 
-    // Handle when a golem gets damaged - prevent it from attacking its own summoner
-    public static void handleGolemDamage(EntityDamageByEntityEvent event, IronGolem golem) {
+    // FIXED: Handle when a golem gets damaged - prevent it from attacking its own summoner
+    public static void handleGolemDamage(EntityDamageByEntityEvent event, IronGolem golem, TrustManager trustManager) {
         if (!golemUUIDs.contains(golem.getUniqueId())) {
             return; // Not one of our custom golems
         }
 
         // Find the summoner of this golem
         Player summoner = null;
-        for (Map.Entry<UUID, IronGolem> entry : playerGolems.entrySet()) {
-            if (entry.getValue() != null && entry.getValue().equals(golem)) {
-                summoner = org.bukkit.Bukkit.getPlayer(entry.getKey());
+        for (GolemInfo golemInfo : playerGolems.values()) {
+            if (golemInfo.golem != null && golemInfo.golem.equals(golem)) {
+                summoner = org.bukkit.Bukkit.getPlayer(golemInfo.summonerUUID);
                 break;
             }
         }
 
+        if (summoner == null) {
+            return;
+        }
+
         // If the summoner is attacking their own golem, prevent the golem from retaliating
-        if (summoner != null && event.getDamager().equals(summoner)) {
+        if (event.getDamager().getUniqueId().equals(summoner.getUniqueId())) {
             // Clear the golem's target if it's targeting its summoner
-            if (golem.getTarget() != null && golem.getTarget().equals(summoner)) {
+            if (golem.getTarget() != null && golem.getTarget().getUniqueId().equals(summoner.getUniqueId())) {
                 golem.setTarget(null);
+                golem.setAggressive(false);
+            }
+        } else if (event.getDamager() instanceof LivingEntity) {
+            LivingEntity attacker = (LivingEntity) event.getDamager();
+
+            // Check trust system - don't retaliate against trusted players
+            if (attacker instanceof Player && trustManager.isTrusted(summoner, (Player) attacker)) {
+                golem.setTarget(null);
+                return;
+            }
+
+            // Don't attack other custom golems
+            if (attacker instanceof IronGolem && golemUUIDs.contains(attacker.getUniqueId())) {
+                golem.setTarget(null);
+                return;
+            }
+
+            // Make golem defend itself by targeting the attacker
+            golem.setTarget(attacker);
+            if (attacker instanceof Player) {
+                golem.setAggressive(true);
+            }
+        }
+    }
+
+    // FIXED: Handle when summoner attacks something - make golem help
+    public static void handleSummonerAttack(EntityDamageByEntityEvent event, Player summoner, TrustManager trustManager) {
+        GolemInfo golemInfo = playerGolems.get(summoner.getUniqueId());
+        if (golemInfo == null || golemInfo.golem == null || golemInfo.golem.isDead()) {
+            return;
+        }
+
+        if (event.getEntity() instanceof LivingEntity) {
+            LivingEntity target = (LivingEntity) event.getEntity();
+            IronGolem golem = golemInfo.golem;
+
+            // Don't attack other custom golems
+            if (target instanceof IronGolem && golemUUIDs.contains(target.getUniqueId())) {
+                return;
+            }
+
+            // Check trust system - don't attack trusted players
+            if (target instanceof Player && trustManager.isTrusted(summoner, (Player) target)) {
+                return;
+            }
+
+            // Make golem help attack the target
+            golem.setTarget(target);
+            if (target instanceof Player) {
+                golem.setAggressive(true);
             }
         }
     }
@@ -130,8 +210,8 @@ public class BuddyUpAbility extends BaseAbility {
 
         // Find and remove from playerGolems map
         playerGolems.entrySet().removeIf(entry -> {
-            IronGolem playerGolem = entry.getValue();
-            return playerGolem != null && playerGolem.getUniqueId().equals(golemUUID);
+            GolemInfo golemInfo = entry.getValue();
+            return golemInfo.golem != null && golemInfo.golem.getUniqueId().equals(golemUUID);
         });
     }
 

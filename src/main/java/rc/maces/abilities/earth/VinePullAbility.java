@@ -16,19 +16,18 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 import rc.maces.abilities.BaseAbility;
 import rc.maces.managers.CooldownManager;
+import rc.maces.managers.TrustManager;
 
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 // Vine Pull Ability - Pulls all living entities towards you and completely immobilizes them
 public class VinePullAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
 
-    public VinePullAbility(CooldownManager cooldownManager, JavaPlugin plugin) {
+    public VinePullAbility(CooldownManager cooldownManager, JavaPlugin plugin, TrustManager trustManager) {
         super("vine_pull", 25, cooldownManager);
         this.plugin = plugin;
     }

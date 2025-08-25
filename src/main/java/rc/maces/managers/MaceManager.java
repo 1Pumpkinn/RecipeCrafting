@@ -19,10 +19,10 @@ public class MaceManager {
     private final CooldownManager cooldownManager;
     private final AbilityManager abilityManager;
 
-    public MaceManager(JavaPlugin plugin, CooldownManager cooldownManager) {
+    public MaceManager(JavaPlugin plugin, CooldownManager cooldownManager, TrustManager trustManager) {
         this.plugin = plugin;
         this.cooldownManager = cooldownManager;
-        this.abilityManager = new AbilityManager(plugin, cooldownManager, this);
+        this.abilityManager = new AbilityManager(plugin, cooldownManager, this, trustManager);
     }
 
     public ItemStack createAirMace() {
