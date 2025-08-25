@@ -51,7 +51,7 @@ public class ActionBarTask extends BukkitRunnable {
         } else if (maceManager.isEarthMace(mace)) {
             actionBar = createActionBar("Earth", NamedTextColor.GREEN, NamedTextColor.DARK_GREEN,
                     "Buddy Up", getAbilityStatus(playerId, AbilityManager.BUDDY_UP),
-                    "Vine Pull", getAbilityStatus(playerId, AbilityManager.VINE_PULL));
+                    "Vine Trap", getAbilityStatus(playerId, AbilityManager.VINE_PULL)); // CHANGED: Display name to "Vine Trap"
         }
 
         if (actionBar != null) {

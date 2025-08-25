@@ -25,6 +25,7 @@ public class Main extends JavaPlugin {
         maceManager = new MaceManager(this, cooldownManager, trustManager);
         recipeManager = new RecipeManager(this, maceManager);
 
+
         // Register mace commands
         getCommand("airmace").setExecutor(new AirmaceCommand(maceManager));
         getCommand("firemace").setExecutor(new FiremaceCommand(maceManager));
@@ -34,7 +35,7 @@ public class Main extends JavaPlugin {
         // Register element commands
         getCommand("element").setExecutor(new ElementCommand(elementManager));
         getCommand("reroll").setExecutor(new RerollCommand(elementManager));
-        getCommand("myelement").setExecutor(new MyElementCommand(elementManager));
+        getCommand("myelement").setExecutor(new MyElementCommand(elementManager, maceManager));
         getCommand("craftedmaces").setExecutor(new CraftedMacesCommand(elementManager, maceManager));
 
         // Register trust commands

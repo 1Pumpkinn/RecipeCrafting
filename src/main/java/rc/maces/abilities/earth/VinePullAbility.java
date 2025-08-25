@@ -1,27 +1,19 @@
 package rc.maces.abilities.earth;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
-import org.bukkit.Sound;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
+import org.bukkit.util.RayTraceResult;
 import rc.maces.abilities.BaseAbility;
 import rc.maces.managers.CooldownManager;
 import rc.maces.managers.TrustManager;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-// FIXED Vine Pull Ability - Now completely immobilizes entities without screen jitter
+// FIXED Vine Trap Ability (formerly Vine Pull) - Now completely immobilizes entities without screen jitter
 public class VinePullAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -57,216 +49,212 @@ public class VinePullAbility extends BaseAbility {
 
     @Override
     public void execute(Player player) {
-        if (!canUse(player)) return;
-
-        Location center = player.getLocation();
-        int trappedCount = 0;
-        long trapEndTime = System.currentTimeMillis() + 5000; // 5 seconds from now
-
-        // Find and trap all living entities in range
-        Collection<Entity> nearby = center.getWorld().getNearbyEntities(center, 3, 3, 3);
-        for (Entity entity : nearby) {
-            if (entity instanceof LivingEntity && entity != player) {
-                LivingEntity target = (LivingEntity) entity;
-
-                // Check trust system - don't trap trusted players
-                if (target instanceof Player && trustManager.isTrusted(player, (Player) target)) {
-                    continue;
-                }
-
-                // Store trap data for this entity
-                float originalWalkSpeed = 0.2f;
-                float originalFlySpeed = 0.1f;
-
-                if (target instanceof Player) {
-                    Player targetPlayer = (Player) target;
-                    originalWalkSpeed = targetPlayer.getWalkSpeed();
-                    originalFlySpeed = targetPlayer.getFlySpeed();
-
-                    // Completely disable movement
-                    targetPlayer.setWalkSpeed(0.0f);
-                    targetPlayer.setFlySpeed(0.0f);
-                }
-
-                Location trapLocation = target.getLocation().clone();
-                VineTrappedData trapData = new VineTrappedData(trapLocation, originalWalkSpeed, originalFlySpeed, trapEndTime);
-                trappedEntities.put(target.getUniqueId(), trapData);
-
-                // Stop any current movement
-                target.setVelocity(new Vector(0, 0, 0));
-
-                trappedCount++;
-
-                // Send message only to players
-                if (target instanceof Player) {
-                    ((Player) target).sendMessage(Component.text("🌿 Completely trapped by vines! You cannot move for 5 seconds!")
-                            .color(NamedTextColor.DARK_GREEN));
-                }
-            }
-        }
-
-        if (trappedCount == 0) {
-            player.sendMessage(Component.text("🌿 No entities found to trap!")
-                    .color(NamedTextColor.GRAY));
+        // Check if player can use the ability (cooldown check)
+        if (cooldownManager.isOnCooldown(player, "vine_pull")) {
+            int remainingSeconds = cooldownManager.getRemainingCooldownSeconds(player, "vine_pull");
+            player.sendMessage("Vine Pull is on cooldown for " + remainingSeconds + " more seconds!");
             return;
         }
 
-        // Start the trap effect task
-        startTrapEffectTask(center, trapEndTime);
+        // Get target player
+        Player target = getTargetPlayer(player);
 
-        player.sendMessage(Component.text("🌿 VINE TRAP! Completely immobilized " + trappedCount + " entities for 5 seconds!")
-                .color(NamedTextColor.GREEN));
-        center.getWorld().playSound(center, Sound.BLOCK_GRASS_BREAK, 2.0f, 0.6f);
-        center.getWorld().playSound(center, Sound.ENTITY_SPIDER_STEP, 1.5f, 0.8f);
-
-        setCooldown(player);
-    }
-
-    private void startTrapEffectTask(Location center, long trapEndTime) {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                long currentTime = System.currentTimeMillis();
-
-                if (currentTime >= trapEndTime) {
-                    // Release all trapped entities
-                    releaseAllTrappedEntities();
-                    cancel();
-                    return;
-                }
-
-                // Maintain traps and create visual effects
-                for (Map.Entry<UUID, VineTrappedData> entry : trappedEntities.entrySet()) {
-                    UUID entityId = entry.getKey();
-                    VineTrappedData trapData = entry.getValue();
-
-                    if (trapData.trapEndTime <= currentTime) {
-                        continue; // This entity should be released
-                    }
-
-                    Entity entity = null;
-                    for (Player p : plugin.getServer().getOnlinePlayers()) {
-                        if (p.getUniqueId().equals(entityId)) {
-                            entity = p;
-                            break;
-                        }
-                    }
-
-                    if (entity == null) {
-                        // Try to find among all entities in the world
-                        if (pluginInstance != null) {
-                            for (Entity e : center.getWorld().getEntities()) {
-                                if (e.getUniqueId().equals(entityId)) {
-                                    entity = e;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    if (entity != null && entity.isValid() && !entity.isDead()) {
-                        // Force entity to stay in trap location (without the jittery teleporting)
-                        Location currentLoc = entity.getLocation();
-                        Location trapLoc = trapData.trapLocation;
-
-                        // Only teleport if they've moved significantly (reduces jitter)
-                        if (currentLoc.distance(trapLoc) > 0.1) {
-                            entity.teleport(trapLoc);
-                        }
-
-                        // Continuously cancel any movement
-                        entity.setVelocity(new Vector(0, 0, 0));
-
-                        // Create vine particles every second
-                        if (System.currentTimeMillis() % 1000 < 50) { // Roughly every second
-                            for (int x = -1; x <= 1; x++) {
-                                for (int z = -1; z <= 1; z++) {
-                                    Location particleLoc = trapLoc.clone().add(x, 0.5, z);
-                                    trapLoc.getWorld().spawnParticle(Particle.DUST, particleLoc, 3, Material.VINE.createBlockData());
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }.runTaskTimer(plugin, 0L, 2L); // Run every 2 ticks for smoother effect
-    }
-
-    private void releaseAllTrappedEntities() {
-        for (Map.Entry<UUID, VineTrappedData> entry : trappedEntities.entrySet()) {
-            UUID entityId = entry.getKey();
-            VineTrappedData trapData = entry.getValue();
-
-            Entity entity = null;
-            if (pluginInstance != null) {
-                for (Player p : pluginInstance.getServer().getOnlinePlayers()) {
-                    if (p.getUniqueId().equals(entityId)) {
-                        entity = p;
-                        break;
-                    }
-                }
-            }
-
-            if (entity instanceof Player) {
-                Player player = (Player) entity;
-
-                // Restore original movement speeds
-                player.setWalkSpeed(trapData.originalWalkSpeed);
-                player.setFlySpeed(trapData.originalFlySpeed);
-
-                // Clear any remaining velocity
-                player.setVelocity(new Vector(0, 0, 0));
-
-                // Send release message
-                player.sendMessage(Component.text("🌿 You break free from the vine trap!")
-                        .color(NamedTextColor.GREEN));
-            }
+        if (target == null) {
+            player.sendMessage("No valid target found!");
+            return;
         }
 
-        trappedEntities.clear();
+        // Check if target is the same as caster
+        if (target.equals(player)) {
+            player.sendMessage("You cannot use this ability on yourself!");
+            return;
+        }
+
+        // Check trust/permission - prevent using ability on trusted allies
+        if (trustManager.isTrusted(player, target)) {
+            player.sendMessage("You cannot use this ability on " + target.getName() + " - you are allies!");
+            return;
+        }
+
+        // Check if target is already trapped
+        if (isEntityTrapped(target.getUniqueId())) {
+            player.sendMessage(target.getName() + " is already trapped!");
+            return;
+        }
+
+        // Trap the target for 5 seconds (adjust as needed)
+        trapEntity(target, 5);
+
+        // Send messages
+        player.sendMessage("You have trapped " + target.getName() + " with vines!");
+        target.sendMessage("You have been trapped by vines by " + player.getName() + "!");
+
+        // Apply cooldown
+        cooldownManager.setCooldown(player, "vine_pull", 25 * 1000L); // 25 seconds
     }
 
-    // Static method to check if an entity is trapped (for use in movement events)
+    /**
+     * Get the target player for the ability using ray tracing
+     */
+    private Player getTargetPlayer(Player caster) {
+        // Use ray tracing to find the target player within 10 blocks
+        RayTraceResult result = caster.getWorld().rayTraceEntities(
+                caster.getEyeLocation(),
+                caster.getEyeLocation().getDirection(),
+                10.0, // max distance
+                entity -> entity instanceof Player && !entity.equals(caster)
+        );
+
+        if (result != null && result.getHitEntity() instanceof Player) {
+            return (Player) result.getHitEntity();
+        }
+
+        return null;
+    }
+
+    // ==================== STATIC METHODS ====================
+
+    /**
+     * Check if an entity is currently trapped by Vine Pull
+     * @param entityId The UUID of the entity to check
+     * @return true if the entity is trapped, false otherwise
+     */
     public static boolean isEntityTrapped(UUID entityId) {
-        VineTrappedData trapData = trappedEntities.get(entityId);
-        if (trapData == null) {
+        if (!trappedEntities.containsKey(entityId)) {
             return false;
         }
 
-        if (System.currentTimeMillis() >= trapData.trapEndTime) {
-            trappedEntities.remove(entityId);
+        VineTrappedData data = trappedEntities.get(entityId);
+
+        // Check if the trap has expired
+        if (System.currentTimeMillis() > data.trapEndTime) {
+            // Clean up expired trap
+            releaseEntity(entityId);
             return false;
         }
 
         return true;
     }
 
-    // Static method to get trap location for an entity
+    /**
+     * Get the trap location for a trapped entity
+     * @param entityId The UUID of the entity
+     * @return The location where the entity is trapped, or null if not trapped
+     */
     public static Location getTrapLocation(UUID entityId) {
-        VineTrappedData trapData = trappedEntities.get(entityId);
-        return trapData != null ? trapData.trapLocation.clone() : null;
+        VineTrappedData data = trappedEntities.get(entityId);
+        return data != null ? data.trapLocation.clone() : null;
     }
 
-    // Static method to force release a specific entity (if needed)
-    public static void releaseEntity(UUID entityId) {
-        VineTrappedData trapData = trappedEntities.remove(entityId);
-        if (trapData != null) {
-            Entity entity = null;
-            if (pluginInstance != null) {
-                for (Player p : pluginInstance.getServer().getOnlinePlayers()) {
-                    if (p.getUniqueId().equals(entityId)) {
-                        entity = p;
-                        break;
-                    }
-                }
-            }
+    /**
+     * Trap an entity at their current location
+     * @param player The player to trap
+     * @param durationSeconds How long to trap them for
+     */
+    public static void trapEntity(Player player, int durationSeconds) {
+        UUID playerId = player.getUniqueId();
+        Location trapLocation = player.getLocation();
 
-            if (entity instanceof Player) {
-                Player player = (Player) entity;
-                player.setWalkSpeed(trapData.originalWalkSpeed);
-                player.setFlySpeed(trapData.originalFlySpeed);
-                player.setVelocity(new Vector(0, 0, 0));
+        // Store original speeds
+        float originalWalkSpeed = player.getWalkSpeed();
+        float originalFlySpeed = player.getFlySpeed();
+
+        // Calculate trap end time
+        long trapEndTime = System.currentTimeMillis() + (durationSeconds * 1000L);
+
+        // Store trapped data
+        trappedEntities.put(playerId, new VineTrappedData(
+                trapLocation, originalWalkSpeed, originalFlySpeed, trapEndTime
+        ));
+
+        // Set speeds to 0 to prevent movement
+        player.setWalkSpeed(0f);
+        player.setFlySpeed(0f);
+
+        // Schedule automatic release
+        if (pluginInstance != null) {
+            pluginInstance.getServer().getScheduler().runTaskLater(pluginInstance, () -> {
+                releaseEntity(playerId);
+            }, durationSeconds * 20L); // Convert seconds to ticks
+        }
+    }
+
+    /**
+     * Release a trapped entity
+     * @param entityId The UUID of the entity to release
+     */
+    public static void releaseEntity(UUID entityId) {
+        VineTrappedData data = trappedEntities.remove(entityId);
+
+        if (data != null) {
+            // Restore original speeds if player is still online
+            Player player = pluginInstance != null ? pluginInstance.getServer().getPlayer(entityId) : null;
+            if (player != null && player.isOnline()) {
+                player.setWalkSpeed(data.originalWalkSpeed);
+                player.setFlySpeed(data.originalFlySpeed);
+                player.sendMessage("You have been freed from the vines!");
             }
         }
+    }
+
+    /**
+     * Get all currently trapped entities (for cleanup/debugging)
+     * @return Map of trapped entities
+     */
+    public static Map<UUID, VineTrappedData> getTrappedEntities() {
+        return new HashMap<>(trappedEntities);
+    }
+
+    /**
+     * Clean up expired traps (should be called periodically)
+     */
+    public static void cleanupExpiredTraps() {
+        long currentTime = System.currentTimeMillis();
+        trappedEntities.entrySet().removeIf(entry -> {
+            boolean expired = currentTime > entry.getValue().trapEndTime;
+            if (expired) {
+                // Restore player speeds if they're still online
+                Player player = pluginInstance != null ? pluginInstance.getServer().getPlayer(entry.getKey()) : null;
+                if (player != null && player.isOnline()) {
+                    player.setWalkSpeed(entry.getValue().originalWalkSpeed);
+                    player.setFlySpeed(entry.getValue().originalFlySpeed);
+                    player.sendMessage("You have been freed from the vines!");
+                }
+            }
+            return expired;
+        });
+    }
+
+    /**
+     * Force release all trapped entities (useful for plugin disable)
+     */
+    public static void releaseAllEntities() {
+        for (UUID entityId : trappedEntities.keySet()) {
+            releaseEntity(entityId);
+        }
+        trappedEntities.clear();
+    }
+
+    /**
+     * Check if any entities are currently trapped
+     * @return true if there are trapped entities, false otherwise
+     */
+    public static boolean hasTrappedEntities() {
+        return !trappedEntities.isEmpty();
+    }
+
+    /**
+     * Get the remaining trap time for an entity in seconds
+     * @param entityId The UUID of the entity
+     * @return remaining time in seconds, or -1 if not trapped
+     */
+    public static int getRemainingTrapTime(UUID entityId) {
+        VineTrappedData data = trappedEntities.get(entityId);
+        if (data == null) {
+            return -1;
+        }
+
+        long remainingMs = data.trapEndTime - System.currentTimeMillis();
+        return Math.max(0, (int) (remainingMs / 1000));
     }
 }

@@ -215,14 +215,14 @@ public class MaceListener implements Listener {
                 String shooterElement = elementManager.getPlayerElement(shooterPlayer);
 
                 if (maceManager.isAirMace(mainHand) || maceManager.isAirMace(offHand) || "AIR".equals(shooterElement)) {
-                    // STRONGER pulling effect for air mace/element - increased force
+                    // NERFED: Reduced pulling effect - decreased force
                     Vector direction = shooterPlayer.getLocation().toVector()
                             .subtract(hitEntity.getLocation().toVector())
                             .normalize()
-                            .multiply(3.5); // Increased from 2.5 to 3.5 for stronger pull
+                            .multiply(2.2); // REDUCED from 3.5 to 2.2
 
-                    // Stronger upward component to pull entities into the air
-                    direction.setY(1.8); // Increased from 1.2 to 1.8 for stronger upward pull
+                    // Reduced upward component
+                    direction.setY(1.2); // REDUCED from 1.8 to 1.2
 
                     hitEntity.setVelocity(direction);
 

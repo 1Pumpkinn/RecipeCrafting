@@ -329,6 +329,26 @@ public class TrustManager {
         }
     }
 
+    /**
+     * Check if a player can use an ability on another player (not trusted allies)
+     * @param caster The player casting the ability
+     * @param target The target player
+     * @return true if the ability can be used, false if they are trusted allies
+     */
+    public boolean canUseAbilityOn(Player caster, Player target) {
+        if (caster == null || target == null) {
+            return true; // Allow if either player is null (shouldn't happen in normal gameplay)
+        }
+
+        if (caster.equals(target)) {
+            return false; // Don't allow self-targeting
+        }
+
+        // Return false if they are trusted allies (ability should be blocked)
+        // Return true if they are not allies (ability is allowed)
+        return !isTrusted(caster, target);
+    }
+
     public void saveAllData() {
         saveTrustData();
         plugin.getLogger().info("Saved all trust data to file.");

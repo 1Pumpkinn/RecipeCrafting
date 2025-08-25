@@ -5,6 +5,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.util.Vector;
 import rc.maces.abilities.earth.VinePullAbility;
 
@@ -24,11 +25,10 @@ public class MovementPreventionListener implements Listener {
             Location trapLocation = VinePullAbility.getTrapLocation(playerId);
 
             if (trapLocation != null) {
-                // Cancel the movement by setting the "to" location to the trap location
                 Location from = event.getFrom();
                 Location to = event.getTo();
 
-                // Only prevent horizontal movement, allow looking around
+                // Only prevent horizontal movement and significant vertical movement, allow looking around
                 if (to != null && (to.getX() != from.getX() || to.getZ() != from.getZ() || Math.abs(to.getY() - from.getY()) > 0.1)) {
                     // Set the destination to the trap location but preserve head movement
                     Location newTo = trapLocation.clone();
@@ -41,6 +41,19 @@ public class MovementPreventionListener implements Listener {
                     event.getPlayer().setVelocity(new Vector(0, 0, 0));
                 }
             }
+        }
+    }
+
+    /**
+     * Clean up trapped entities when players quit to prevent memory leaks
+     */
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        UUID playerId = event.getPlayer().getUniqueId();
+
+        // Release the player if they're trapped when they quit
+        if (VinePullAbility.isEntityTrapped(playerId)) {
+            VinePullAbility.releaseEntity(playerId);
         }
     }
 }
