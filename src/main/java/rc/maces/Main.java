@@ -21,7 +21,7 @@ public class Main extends JavaPlugin {
         cooldownManager = new CooldownManager();
         elementManager = new ElementManager(this);
         trustManager = new TrustManager(this);
-        maceManager = new MaceManager(this, cooldownManager, trustManager); // FIXED: Added trustManager parameter
+        maceManager = new MaceManager(this, cooldownManager, trustManager);
         recipeManager = new RecipeManager(this, maceManager);
 
         // Register mace commands
@@ -50,6 +50,8 @@ public class Main extends JavaPlugin {
                 new CraftingListener(this, recipeManager, elementManager), this);
         getServer().getPluginManager().registerEvents(
                 new PlayerJoinListener(elementManager), this);
+        getServer().getPluginManager().registerEvents(
+                new MacePickupListener(maceManager, elementManager), this);
 
         // Register recipes
         recipeManager.registerAllRecipes();
@@ -72,6 +74,8 @@ public class Main extends JavaPlugin {
         getLogger().info("- Trust/alliance system with PvP protection");
         getLogger().info("- Element-restricted crafting system");
         getLogger().info("- Real-time ability status display");
+        getLogger().info("- Auto element switching when picking up maces");
+        getLogger().info("- One mace per player limit enforced");
     }
 
     @Override

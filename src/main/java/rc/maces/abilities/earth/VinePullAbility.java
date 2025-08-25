@@ -10,8 +10,6 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 import rc.maces.abilities.BaseAbility;
@@ -22,14 +20,16 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-// Vine Pull Ability - Pulls all living entities towards you and completely immobilizes them
+// REWORKED Vine Pull Ability - Now traps entities in place instead of pulling them (no more buggy movement)
 public class VinePullAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
+    private final TrustManager trustManager;
 
     public VinePullAbility(CooldownManager cooldownManager, JavaPlugin plugin, TrustManager trustManager) {
         super("vine_pull", 25, cooldownManager);
         this.plugin = plugin;
+        this.trustManager = trustManager;
     }
 
     @Override
@@ -37,7 +37,7 @@ public class VinePullAbility extends BaseAbility {
         if (!canUse(player)) return;
 
         Location center = player.getLocation();
-        Map<LivingEntity, Location> entangledEntities = new HashMap<>();
+        Map<LivingEntity, Location> trappedEntities = new HashMap<>();
         Map<Player, Float> originalWalkSpeeds = new HashMap<>();
         Map<Player, Float> originalFlySpeeds = new HashMap<>();
 
@@ -53,75 +53,84 @@ public class VinePullAbility extends BaseAbility {
                     return;
                 }
 
-                // Pull all living entities towards center every 5 ticks
-                if (ticks % 5 == 0) {
+                // Initial trap setup - find and trap all living entities
+                if (ticks == 0) {
                     Collection<Entity> nearby = center.getWorld().getNearbyEntities(center, 3, 3, 3);
                     for (Entity entity : nearby) {
                         if (entity instanceof LivingEntity && entity != player) {
                             LivingEntity target = (LivingEntity) entity;
 
-                            // Calculate direction towards center
-                            Vector direction = center.toVector()
-                                    .subtract(target.getLocation().toVector())
-                                    .normalize()
-                                    .multiply(1.2);
+                            // Check trust system - don't trap trusted players
+                            if (target instanceof Player && trustManager.isTrusted(player, (Player) target)) {
+                                continue;
+                            }
 
-                            target.setVelocity(direction);
+                            // Store the target's initial location for complete immobilization
+                            Location trapLocation = target.getLocation().clone();
+                            trappedEntities.put(target, trapLocation);
 
-                            // Store the target's location for complete immobilization
-                            Location immobilizeLocation = target.getLocation().clone();
-                            entangledEntities.put(target, immobilizeLocation);
-
-                            // Complete immobilization - maximum strength effects
-                            target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, 255)); // Can't move
-                            target.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, 40, 255)); // Can't break blocks
-                            target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 40, 255)); // Maximum weakness
-                            target.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, 40, -10)); // Prevents jumping (negative effect)
-
-                            // Additional stunning effects for players
+                            // For players - completely disable movement
                             if (target instanceof Player) {
                                 Player targetPlayer = (Player) target;
 
                                 // Store original speeds only on first application
-                                if (!originalWalkSpeeds.containsKey(targetPlayer)) {
-                                    originalWalkSpeeds.put(targetPlayer, targetPlayer.getWalkSpeed());
-                                    originalFlySpeeds.put(targetPlayer, targetPlayer.getFlySpeed());
-                                }
+                                originalWalkSpeeds.put(targetPlayer, targetPlayer.getWalkSpeed());
+                                originalFlySpeeds.put(targetPlayer, targetPlayer.getFlySpeed());
 
-                                // Prevent any movement by setting walk speed to 0
+                                // Completely prevent movement by setting speeds to 0
                                 targetPlayer.setWalkSpeed(0.0f);
                                 targetPlayer.setFlySpeed(0.0f);
                             }
+
+                            // Stop any current velocity immediately
+                            target.setVelocity(new Vector(0, 0, 0));
 
                             // Add vine particles around target instead of placing blocks
                             Location targetLoc = target.getLocation();
                             for (int x = -1; x <= 1; x++) {
                                 for (int z = -1; z <= 1; z++) {
                                     Location particleLoc = targetLoc.clone().add(x, 0, z);
-                                    targetLoc.getWorld().spawnParticle(Particle.BLOCK_CRUMBLE, particleLoc, 5, Material.VINE.createBlockData());
+                                    targetLoc.getWorld().spawnParticle(Particle.DUST, particleLoc, 5, Material.VINE.createBlockData());
                                 }
                             }
 
                             // Send message only to players
                             if (target instanceof Player) {
-                                ((Player) target).sendMessage(Component.text("🌿 Completely entangled by vines! You are stunned!")
+                                ((Player) target).sendMessage(Component.text("🌿 Completely trapped by vines! You cannot move!")
                                         .color(NamedTextColor.DARK_GREEN));
                             }
                         }
                     }
                 }
 
-                // Force entangled entities to stay in their immobilized position every tick
-                for (Map.Entry<LivingEntity, Location> entry : entangledEntities.entrySet()) {
+                // Every tick: Force trapped entities to stay exactly in their trap position
+                for (Map.Entry<LivingEntity, Location> entry : trappedEntities.entrySet()) {
                     LivingEntity entity = entry.getKey();
-                    Location immobilizeLocation = entry.getValue();
+                    Location trapLocation = entry.getValue();
 
-                    // Only teleport back if entity is still alive and valid
+                    // Only process if entity is still alive and valid
                     if (!entity.isDead() && entity.isValid()) {
-                        // Teleport them back if they've moved more than a small threshold
-                        if (entity.getLocation().distance(immobilizeLocation) > 0.1) {
-                            entity.teleport(immobilizeLocation);
-                            entity.setVelocity(new Vector(0, 0, 0)); // Cancel any velocity
+                        // Force entity to exact trap location to prevent any movement or screen jitter
+                        entity.teleport(trapLocation);
+                        // Cancel any velocity to prevent movement
+                        entity.setVelocity(new Vector(0, 0, 0));
+                    }
+                }
+
+                // Every 20 ticks (1 second): refresh particle effects and send reminder messages
+                if (ticks % 20 == 0) {
+                    for (Map.Entry<LivingEntity, Location> entry : trappedEntities.entrySet()) {
+                        LivingEntity entity = entry.getKey();
+                        Location trapLocation = entry.getValue();
+
+                        if (!entity.isDead() && entity.isValid()) {
+                            // Refresh vine particles
+                            for (int x = -1; x <= 1; x++) {
+                                for (int z = -1; z <= 1; z++) {
+                                    Location particleLoc = trapLocation.clone().add(x, 0, z);
+                                    trapLocation.getWorld().spawnParticle(Particle.DUST, particleLoc, 3, Material.VINE.createBlockData());
+                                }
+                            }
                         }
                     }
                 }
@@ -130,15 +139,9 @@ public class VinePullAbility extends BaseAbility {
             }
 
             private void restoreAllEntities() {
-                // Clear all entangled entities and restore their states
-                for (LivingEntity entity : entangledEntities.keySet()) {
+                // Clear all trapped entities and restore their states
+                for (LivingEntity entity : trappedEntities.keySet()) {
                     if (entity != null && !entity.isDead() && entity.isValid()) {
-                        // Remove all vine pull effects
-                        entity.removePotionEffect(PotionEffectType.SLOWNESS);
-                        entity.removePotionEffect(PotionEffectType.MINING_FATIGUE);
-                        entity.removePotionEffect(PotionEffectType.WEAKNESS);
-                        entity.removePotionEffect(PotionEffectType.JUMP_BOOST);
-
                         // Restore player movement speeds
                         if (entity instanceof Player) {
                             Player targetPlayer = (Player) entity;
@@ -151,7 +154,7 @@ public class VinePullAbility extends BaseAbility {
                             targetPlayer.setFlySpeed(originalFlySpeed);
 
                             // Send restoration message
-                            targetPlayer.sendMessage(Component.text("🌿 You break free from the vines!")
+                            targetPlayer.sendMessage(Component.text("🌿 You break free from the vine trap!")
                                     .color(NamedTextColor.GREEN));
                         }
 
@@ -161,7 +164,7 @@ public class VinePullAbility extends BaseAbility {
                 }
 
                 // Clear all tracking maps
-                entangledEntities.clear();
+                trappedEntities.clear();
                 originalWalkSpeeds.clear();
                 originalFlySpeeds.clear();
             }
@@ -174,7 +177,7 @@ public class VinePullAbility extends BaseAbility {
             }
         }.runTaskTimer(plugin, 0L, 1L);
 
-        player.sendMessage(Component.text("🌿 VINE PULL! Pulling enemies into you and stunning them for 5 seconds!")
+        player.sendMessage(Component.text("🌿 VINE TRAP! Completely immobilizing enemies for 5 seconds!")
                 .color(NamedTextColor.GREEN));
         center.getWorld().playSound(center, Sound.BLOCK_GRASS_BREAK, 2.0f, 0.6f);
         center.getWorld().playSound(center, Sound.ENTITY_SPIDER_STEP, 1.5f, 0.8f);

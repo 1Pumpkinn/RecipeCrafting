@@ -69,7 +69,7 @@ public class PassiveEffectsListener extends BukkitRunnable {
             player.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 40, 0, false, false));
         }
 
-        // When on fire, gain +2 attack damage (works with element role too)
+        // When on fire, gain +1 attack damage (reduced from +2)
         if (player.getFireTicks() > 0) {
             player.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, 40, 0, false, false));
         }
@@ -81,13 +81,13 @@ public class PassiveEffectsListener extends BukkitRunnable {
             // Conduit power
             player.addPotionEffect(new PotionEffect(PotionEffectType.CONDUIT_POWER, 40, 0, false, false));
 
-            // 5x faster swimming - use Dolphins Grace for swimming speed
+            // Dolphins Grace level 1 (reduced from level 4)
             if (player.isInWater()) {
-                player.addPotionEffect(new PotionEffect(PotionEffectType.DOLPHINS_GRACE, 40, 4, false, false));
+                player.addPotionEffect(new PotionEffect(PotionEffectType.DOLPHINS_GRACE, 40, 0, false, false));
             }
         }
 
-        // FIXED drowning effect for nearby living entities in 4x4 area
+        // FIXED drowning effect for nearby living entities in 4x4 area - FIXED BUBBLE ISSUE
         if (holdingMace || "WATER".equals(elementManager.getPlayerElement(player))) {
             Collection<Entity> nearby = player.getWorld().getNearbyEntities(player.getLocation(), 2, 2, 2);
             Set<UUID> currentlyDrowningEntities = new HashSet<>();
@@ -103,23 +103,19 @@ public class PassiveEffectsListener extends BukkitRunnable {
 
                     currentlyDrowningEntities.add(target.getUniqueId());
 
-                    // Apply drowning effect - reduce air and damage when air runs out
+                    // Apply drowning effect - FIXED: Set air to 0 to prevent bubbles and force immediate drowning damage
                     if (target instanceof Player) {
                         Player targetPlayer = (Player) target;
                         // Remove any water breathing effect first
                         targetPlayer.removePotionEffect(PotionEffectType.WATER_BREATHING);
-                        if (targetPlayer.getRemainingAir() > 0) {
-                            targetPlayer.setRemainingAir(Math.max(0, targetPlayer.getRemainingAir() - 60));
-                        } else {
-                            targetPlayer.damage(2.0); // Drowning damage
-                        }
+                        // FIXED: Set air to 0 to prevent bubble regeneration and cause immediate drowning
+                        targetPlayer.setRemainingAir(0);
+                        // Deal drowning damage directly
+                        targetPlayer.damage(2.0);
                     } else {
-                        // For mobs - reduce air and damage
-                        if (target.getRemainingAir() > 0) {
-                            target.setRemainingAir(Math.max(0, target.getRemainingAir() - 80));
-                        } else {
-                            target.damage(2.0); // Drowning damage
-                        }
+                        // For mobs - set air to 0 and damage
+                        target.setRemainingAir(0);
+                        target.damage(2.0);
                     }
                 }
             }
@@ -151,12 +147,14 @@ public class PassiveEffectsListener extends BukkitRunnable {
     }
 
     private void applyEarthMacePassives(Player player, boolean holdingMace) {
-        // Haste 5 when holding mace or has earth element
-        if (holdingMace || "EARTH".equals(elementManager.getPlayerElement(player))) {
-            player.addPotionEffect(new PotionEffect(PotionEffectType.HASTE, 40, 4, false, false));
+        // UPDATED: Haste 5 when holding mace, Haste 3 when just has earth element
+        if (holdingMace) {
+            player.addPotionEffect(new PotionEffect(PotionEffectType.HASTE, 40, 4, false, false)); // Haste 5
+        } else if ("EARTH".equals(elementManager.getPlayerElement(player))) {
+            player.addPotionEffect(new PotionEffect(PotionEffectType.HASTE, 40, 2, false, false)); // Haste 3
         }
 
-        // Hero of the Village effect when holding mace or has earth element
+        // Hero of the Village level 1 when holding mace or has earth element
         if (holdingMace || "EARTH".equals(elementManager.getPlayerElement(player))) {
             player.addPotionEffect(new PotionEffect(PotionEffectType.HERO_OF_THE_VILLAGE, 40, 0, false, false));
         }

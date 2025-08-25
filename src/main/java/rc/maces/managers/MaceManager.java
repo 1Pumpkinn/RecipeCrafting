@@ -37,12 +37,6 @@ public class MaceManager {
                 Component.text("💨 Right-click: Wind Shot (5s cooldown)")
                         .color(NamedTextColor.DARK_GRAY),
                 Component.text("💨 F key: Wind Struck (25s cooldown)")
-                        .color(NamedTextColor.DARK_GRAY),
-                Component.text("💨 Passive: No fall damage")
-                        .color(NamedTextColor.DARK_GRAY),
-                Component.text("💨 Passive: Hit gives slow falling")
-                        .color(NamedTextColor.DARK_GRAY),
-                Component.text("💨 Passive: Wind charges pull entities with enhanced force")
                         .color(NamedTextColor.DARK_GRAY)
         ));
 
@@ -62,12 +56,6 @@ public class MaceManager {
                 Component.text("🔥 Right-click: Obsidian Creation (30s cooldown)")
                         .color(NamedTextColor.DARK_GRAY),
                 Component.text("🔥 F key: Meteors (25s cooldown)")
-                        .color(NamedTextColor.DARK_GRAY),
-                Component.text("🔥 Passive: Fire immunity")
-                        .color(NamedTextColor.DARK_GRAY),
-                Component.text("🔥 Passive: +2 attack damage when on fire")
-                        .color(NamedTextColor.DARK_GRAY),
-                Component.text("🔥 Passive: Ignite enemies on hit")
                         .color(NamedTextColor.DARK_GRAY)
         ));
 
@@ -87,12 +75,6 @@ public class MaceManager {
                 Component.text("🌊 Right-click: Water Heal +2❤ (10s cooldown)")
                         .color(NamedTextColor.DARK_GRAY),
                 Component.text("🌊 F key: Water Geyser (30s cooldown)")
-                        .color(NamedTextColor.DARK_GRAY),
-                Component.text("🌊 Passive: Nearby entities drown 4x4 (works anywhere)")
-                        .color(NamedTextColor.DARK_GRAY),
-                Component.text("🌊 Passive: 5x faster in water")
-                        .color(NamedTextColor.DARK_GRAY),
-                Component.text("🌊 Passive: Conduit Power")
                         .color(NamedTextColor.DARK_GRAY)
         ));
 
@@ -111,11 +93,7 @@ public class MaceManager {
         meta.lore(Arrays.asList(
                 Component.text("🌍 Right-click: Buddy Up (15s cooldown)")
                         .color(NamedTextColor.DARK_GRAY),
-                Component.text("🌍 F key: Vine Pull (25s cooldown)")
-                        .color(NamedTextColor.DARK_GRAY),
-                Component.text("🌍 Passive: Haste 5")
-                        .color(NamedTextColor.DARK_GRAY),
-                Component.text("🌍 Passive: All food = golden apples")
+                Component.text("🌍 F key: Vine Trap (25s cooldown)")
                         .color(NamedTextColor.DARK_GRAY)
         ));
 
@@ -197,7 +175,7 @@ public class MaceManager {
             sb.append("§2§lEarth §a§lMace §8| ");
             appendAbilityStatus(sb, player, AbilityManager.BUDDY_UP, "Buddy Up", "§2");
             sb.append(" §8| ");
-            appendAbilityStatus(sb, player, AbilityManager.VINE_PULL, "Vine Pull", "§a");
+            appendAbilityStatus(sb, player, AbilityManager.VINE_PULL, "Vine Trap", "§a");
         }
 
         return sb.toString();

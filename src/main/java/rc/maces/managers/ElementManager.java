@@ -72,7 +72,7 @@ public class ElementManager {
                 plugin.getLogger().info("Loaded " + playerElements.size() + " player elements from file.");
             }
         } catch (Exception e) {
-            plugin.getLogger().severe("Error while saving data");
+            plugin.getLogger().severe("Error while loading data");
             plugin.getLogger().severe(e.getMessage());
         }
     }
@@ -132,6 +132,37 @@ public class ElementManager {
 
         // Show reroll animation
         showElementRollingAnimation(player, true);
+    }
+
+    /**
+     * Changes a player's element to match a picked up mace
+     */
+    public void switchElementToMace(Player player, String maceElement) {
+        UUID playerId = player.getUniqueId();
+        String currentElement = playerElements.get(playerId);
+
+        if (maceElement.equals(currentElement)) {
+            return; // Already has this element
+        }
+
+        // Switch element immediately
+        playerElements.put(playerId, maceElement);
+        saveElementData();
+
+        // Send notification
+        player.sendMessage(Component.text("⚡ ELEMENT SWITCHED! ⚡")
+                .color(NamedTextColor.GOLD)
+                .decoration(TextDecoration.BOLD, true));
+        player.sendMessage(Component.text("Your element changed to: ")
+                .color(NamedTextColor.YELLOW)
+                .append(Component.text(getElementDisplayName(maceElement))
+                        .color(getElementColor(maceElement))
+                        .decoration(TextDecoration.BOLD, true)));
+
+        player.getWorld().playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.2f);
+
+        plugin.getLogger().info("Switched " + player.getName() + "'s element from " +
+                (currentElement != null ? currentElement : "NONE") + " to " + maceElement);
     }
 
     /**
@@ -261,22 +292,143 @@ public class ElementManager {
 
     public String getElementDisplayName(String element) {
         switch (element) {
-            case FIRE: return "🔥 Fire";
-            case WATER: return "🌊 Water";
-            case EARTH: return "🌍 Earth";
-            case AIR: return "💨 Air";
-            default: return "Unknown";
+            case FIRE:
+                return "🔥 Fire";
+            case WATER:
+                return "🌊 Water";
+            case EARTH:
+                return "🌍 Earth";
+            case AIR:
+                return "💨 Air";
+            default:
+                return "Unknown";
         }
     }
 
     public NamedTextColor getElementColor(String element) {
         switch (element) {
-            case FIRE: return NamedTextColor.RED;
-            case WATER: return NamedTextColor.BLUE;
-            case EARTH: return NamedTextColor.GREEN;
-            case AIR: return NamedTextColor.WHITE;
-            default: return NamedTextColor.GRAY;
+            case FIRE:
+                return NamedTextColor.RED;
+            case WATER:
+                return NamedTextColor.BLUE;
+            case EARTH:
+                return NamedTextColor.GREEN;
+            case AIR:
+                return NamedTextColor.WHITE;
+            default:
+                return NamedTextColor.GRAY;
         }
+    }
+
+    /**
+     * Gets detailed element information with all abilities
+     */
+    public Component getDetailedElementInfo(String element) {
+        Component baseInfo = Component.text("═══════════════════════════").color(NamedTextColor.DARK_GRAY)
+                .appendNewline()
+                .append(Component.text("Element: ").color(NamedTextColor.YELLOW))
+                .append(Component.text(getElementDisplayName(element))
+                        .color(getElementColor(element))
+                        .decoration(TextDecoration.BOLD, true))
+                .appendNewline()
+                .append(Component.text("═══════════════════════════").color(NamedTextColor.DARK_GRAY))
+                .appendNewline();
+
+        Component elementSpecific;
+        switch (element) {
+            case FIRE:
+                elementSpecific = Component.text("🔥 ABILITIES:").color(NamedTextColor.RED).decoration(TextDecoration.BOLD, true)
+                        .appendNewline()
+                        .append(Component.text("• Right-click: Obsidian Creation (30s cooldown)").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("• F key: Meteors (25s cooldown)").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("🔥 PASSIVES:").color(NamedTextColor.RED).decoration(TextDecoration.BOLD, true))
+                        .appendNewline()
+                        .append(Component.text("• Fire Resistance").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("• +1 Attack Damage when on fire").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("• Ignite enemies on hit").color(NamedTextColor.GRAY));
+                break;
+            case WATER:
+                elementSpecific = Component.text("🌊 ABILITIES:").color(NamedTextColor.BLUE).decoration(TextDecoration.BOLD, true)
+                        .appendNewline()
+                        .append(Component.text("• Right-click: Water Heal +2❤ (10s cooldown)").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("• F key: Water Geyser (30s cooldown)").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("🌊 PASSIVES:").color(NamedTextColor.BLUE).decoration(TextDecoration.BOLD, true))
+                        .appendNewline()
+                        .append(Component.text("• Nearby enemies drown in 4x4 area").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("• Dolphins Grace in water").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("• Conduit Power").color(NamedTextColor.GRAY));
+                break;
+            case EARTH:
+                elementSpecific = Component.text("🌍 ABILITIES:").color(NamedTextColor.GREEN).decoration(TextDecoration.BOLD, true)
+                        .appendNewline()
+                        .append(Component.text("• Right-click: Buddy Up (15s cooldown)").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("• F key: Vine Trap (25s cooldown)").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("🌍 PASSIVES:").color(NamedTextColor.GREEN).decoration(TextDecoration.BOLD, true))
+                        .appendNewline()
+                        .append(Component.text("• Hero of the Village").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("• Haste 3 (Haste 5 with mace)").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("• All food = golden apples (with mace)").color(NamedTextColor.GRAY));
+                break;
+            case AIR:
+                elementSpecific = Component.text("💨 ABILITIES:").color(NamedTextColor.WHITE).decoration(TextDecoration.BOLD, true)
+                        .appendNewline()
+                        .append(Component.text("• Right-click: Wind Shot (5s cooldown)").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("• F key: Wind Struck (25s cooldown)").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("💨 PASSIVES:").color(NamedTextColor.WHITE).decoration(TextDecoration.BOLD, true))
+                        .appendNewline()
+                        .append(Component.text("• Speed 1").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("• No fall damage").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("• Wind charges pull entities").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("• Hit gives slow falling").color(NamedTextColor.GRAY));
+                break;
+            default:
+                elementSpecific = Component.text("Unknown element").color(NamedTextColor.GRAY);
+                break;
+        }
+
+        return baseInfo.append(elementSpecific)
+                .appendNewline()
+                .append(Component.text("═══════════════════════════").color(NamedTextColor.DARK_GRAY));
+    }
+
+    /**
+     * Gets a list of all elements with their display names
+     */
+    public Component getElementList() {
+        return Component.text("═══════════════════════════").color(NamedTextColor.DARK_GRAY)
+                .appendNewline()
+                .append(Component.text("Available Elements:").color(NamedTextColor.GOLD).decoration(TextDecoration.BOLD, true))
+                .appendNewline()
+                .append(Component.text("═══════════════════════════").color(NamedTextColor.DARK_GRAY))
+                .appendNewline()
+                .append(Component.text("🔥 Fire - Fire Resistance, +1 Attack when burning").color(NamedTextColor.RED))
+                .appendNewline()
+                .append(Component.text("🌊 Water - Drowning aura, Dolphins Grace, Conduit Power").color(NamedTextColor.BLUE))
+                .appendNewline()
+                .append(Component.text("🌍 Earth - Hero of Village, Haste 3, Golden apple food").color(NamedTextColor.GREEN))
+                .appendNewline()
+                .append(Component.text("💨 Air - Speed 1, No fall damage, Wind charge pull").color(NamedTextColor.WHITE))
+                .appendNewline()
+                .append(Component.text("═══════════════════════════").color(NamedTextColor.DARK_GRAY))
+                .appendNewline()
+                .append(Component.text("Use /element <element> to see detailed info!").color(NamedTextColor.YELLOW));
     }
 
     private Component createWelcomeBackMessage(String element, String playerName) {
@@ -293,7 +445,9 @@ public class ElementManager {
                         .decoration(TextDecoration.BOLD, true))
                 .appendNewline()
                 .append(Component.text("You can only craft the " + element.toLowerCase() + " mace!")
-                        .color(NamedTextColor.GRAY));
+                        .color(NamedTextColor.GRAY))
+                .appendNewline()
+                .append(Component.text("Use /myelement for detailed info!").color(NamedTextColor.AQUA));
     }
 
     private Component createElementAssignmentMessage(String element, String playerName) {
@@ -301,25 +455,7 @@ public class ElementManager {
                 .color(NamedTextColor.GOLD)
                 .decoration(TextDecoration.BOLD, true)
                 .appendNewline()
-                .append(Component.text("═══════════════════════════").color(NamedTextColor.DARK_GRAY))
-                .appendNewline()
-                .append(Component.text("Player: ").color(NamedTextColor.YELLOW))
-                .append(Component.text(playerName).color(NamedTextColor.WHITE).decoration(TextDecoration.BOLD, true))
-                .appendNewline()
-                .append(Component.text("Your Element: ").color(NamedTextColor.YELLOW))
-                .append(Component.text(getElementDisplayName(element))
-                        .color(getElementColor(element))
-                        .decoration(TextDecoration.BOLD, true))
-                .appendNewline()
-                .append(Component.text("═══════════════════════════").color(NamedTextColor.DARK_GRAY))
-                .appendNewline()
-                .append(Component.text("You can only craft the " + element.toLowerCase() + " mace!")
-                        .color(NamedTextColor.GRAY))
-                .appendNewline()
-                .append(Component.text("Some passive abilities work even without holding your mace!")
-                        .color(NamedTextColor.DARK_AQUA))
-                .appendNewline()
-                .append(Component.text("Welcome to the elemental world!").color(NamedTextColor.GREEN));
+                .append(getDetailedElementInfo(element));
     }
 
     private Component createElementRerollMessage(String newElement, String oldElement, String playerName) {
@@ -340,12 +476,7 @@ public class ElementManager {
                         .color(getElementColor(newElement))
                         .decoration(TextDecoration.BOLD, true))
                 .appendNewline()
-                .append(Component.text("═══════════════════════════").color(NamedTextColor.DARK_GRAY))
-                .appendNewline()
-                .append(Component.text("You can now craft the " + newElement.toLowerCase() + " mace!")
-                        .color(NamedTextColor.GREEN))
-                .appendNewline()
-                .append(Component.text("Your element has been changed!").color(NamedTextColor.AQUA));
+                .append(getDetailedElementInfo(newElement));
     }
 
     @Deprecated
