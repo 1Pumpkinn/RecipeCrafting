@@ -16,6 +16,8 @@ public class Main extends JavaPlugin {
     private TrustManager trustManager;
     private PassiveEffectsListener passiveEffectsListener;
     private CraftingListener craftingListener;
+    private CraftingRestrictionListener craftingRestrictionListener;
+    private HeavyCoreMonitor heavyCoreMonitor;
 
     @Override
     public void onEnable() {
@@ -28,6 +30,10 @@ public class Main extends JavaPlugin {
 
         // Initialize crafting listener (needs to be done before command registration)
         craftingListener = new CraftingListener(this, recipeManager, elementManager);
+
+        // Initialize security listeners
+        craftingRestrictionListener = new CraftingRestrictionListener(maceManager, this);
+        heavyCoreMonitor = new HeavyCoreMonitor(this);
 
         // Register mace commands
         getCommand("airmace").setExecutor(new AirmaceCommand(maceManager));
@@ -51,6 +57,9 @@ public class Main extends JavaPlugin {
         getCommand("trustaccept").setExecutor(new TrustAcceptCommand(trustManager));
         getCommand("trustdeny").setExecutor(new TrustDenyCommand(trustManager));
 
+        // Register security command
+        getCommand("macesecurity").setExecutor(new MaceSecurityCommand(craftingRestrictionListener, heavyCoreMonitor));
+
         // Register event listeners
         getServer().getPluginManager().registerEvents(
                 new MaceListener(maceManager, elementManager, trustManager), this);
@@ -62,9 +71,9 @@ public class Main extends JavaPlugin {
                 new MacePickupListener(maceManager, elementManager), this);
 
         getServer().getPluginManager().registerEvents(
-                new CraftingRestrictionListener(maceManager, this), this);
+                craftingRestrictionListener, this);
         getServer().getPluginManager().registerEvents(
-                new HeavyCoreMonitor(this), this);
+                heavyCoreMonitor, this);
 
         // Register recipes
         recipeManager.registerAllRecipes();
@@ -92,6 +101,7 @@ public class Main extends JavaPlugin {
         getLogger().info("- Normal mace crafting disabled");
         getLogger().info("- Chat spam prevention active");
         getLogger().info("- Mace crafting reset system enabled");
+        getLogger().info("- Advanced mace security system active");
     }
 
     @Override
@@ -136,5 +146,13 @@ public class Main extends JavaPlugin {
 
     public CraftingListener getCraftingListener() {
         return craftingListener;
+    }
+
+    public CraftingRestrictionListener getCraftingRestrictionListener() {
+        return craftingRestrictionListener;
+    }
+
+    public HeavyCoreMonitor getHeavyCoreMonitor() {
+        return heavyCoreMonitor;
     }
 }

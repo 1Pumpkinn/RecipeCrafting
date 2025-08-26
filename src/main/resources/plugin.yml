@@ -101,6 +101,14 @@ commands:
     permission-message: "&cYou don't have permission to use the trust system!"
     aliases: [denytrust, rejecttrust, trustno]
 
+  # Security command
+  macesecurity:
+    description: Monitor and manage mace security systems
+    usage: /<command> [status|scan|help]
+    permission: element.admin
+    permission-message: "&cYou don't have permission to use security commands!"
+    aliases: [msecurity, macesec, securitycheck]
+
   # Utility commands
   macereload:
     description: Reload plugin configuration
@@ -128,6 +136,7 @@ permissions:
       watermace.give: true
       earthmace.give: true
       maces.reset.others: true
+      maces.security: true
 
   element.reroll.others:
     description: Allows rerolling other players' elements
@@ -136,6 +145,11 @@ permissions:
   element.use:
     description: Allows using element commands (info, check, list)
     default: true
+
+  # Security permissions
+  maces.security:
+    description: Allows using mace security monitoring commands
+    default: op
 
   # Mace giving permissions
   maces.give.*:
@@ -209,3 +223,4 @@ permissions:
       maces.give.*: true
       maces.player: true
       maces.reset.others: true
+      maces.security: true
