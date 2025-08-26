@@ -33,7 +33,7 @@ public class EarthmaceRecipe implements CustomRecipe {
 
         ShapedRecipe recipe = new ShapedRecipe(recipeKey, result);
         recipe.shape("SGS", "GHG", "SBS");
-        recipe.setIngredient('S', Material.STONE);
+        recipe.setIngredient('S', Material.SCULK_CATALYST);
         recipe.setIngredient('G', Material.GRASS_BLOCK);
         recipe.setIngredient('H', Material.HEAVY_CORE);
         recipe.setIngredient('B', Material.BREEZE_ROD);
