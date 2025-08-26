@@ -175,7 +175,7 @@ public class MaceManager {
             sb.append("§2§lEarth §a§lMace §8| ");
             appendAbilityStatus(sb, player, AbilityManager.BUDDY_UP, "Buddy Up", "§2");
             sb.append(" §8| ");
-            appendAbilityStatus(sb, player, AbilityManager.VINE_PULL, "Vine Trap", "§a");
+            appendAbilityStatus(sb, player, AbilityManager.VINE_TRAP, "Vine Trap", "§a");
         }
 
         return sb.toString();

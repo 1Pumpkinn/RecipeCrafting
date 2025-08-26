@@ -80,5 +80,5 @@ public class AbilityManager {
     public static final String WATER_GEYSER = "water_geyser";
     //EARTH
     public static final String BUDDY_UP = "buddy_up";
-    public static final String VINE_PULL = "vine_pull";
+    public static final String VINE_TRAP = "vine_trap";
 }

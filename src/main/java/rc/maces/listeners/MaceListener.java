@@ -80,7 +80,7 @@ public class MaceListener implements Listener {
             } else if (maceManager.isWaterMace(item)) {
                 maceManager.getAbilityManager().executeAbility(player, AbilityManager.WATER_GEYSER);
             } else if (maceManager.isEarthMace(item)) {
-                maceManager.getAbilityManager().executeAbility(player, AbilityManager.VINE_PULL);
+                maceManager.getAbilityManager().executeAbility(player, AbilityManager.VINE_TRAP);
             }
         }
     }
