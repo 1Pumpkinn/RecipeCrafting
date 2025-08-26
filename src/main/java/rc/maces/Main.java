@@ -15,6 +15,7 @@ public class Main extends JavaPlugin {
     private RecipeManager recipeManager;
     private TrustManager trustManager;
     private PassiveEffectsListener passiveEffectsListener;
+    private CraftingListener craftingListener;
 
     @Override
     public void onEnable() {
@@ -24,6 +25,9 @@ public class Main extends JavaPlugin {
         trustManager = new TrustManager(this);
         maceManager = new MaceManager(this, cooldownManager, trustManager);
         recipeManager = new RecipeManager(this, maceManager);
+
+        // Initialize crafting listener (needs to be done before command registration)
+        craftingListener = new CraftingListener(this, recipeManager, elementManager);
 
         // Register mace commands
         getCommand("airmace").setExecutor(new AirmaceCommand(maceManager));
@@ -35,7 +39,10 @@ public class Main extends JavaPlugin {
         getCommand("element").setExecutor(new ElementCommand(elementManager));
         getCommand("reroll").setExecutor(new RerollCommand(elementManager));
         getCommand("myelement").setExecutor(new MyElementCommand(elementManager, maceManager));
-        getCommand("craftedmaces").setExecutor(new CraftedMacesCommand(elementManager, maceManager));
+        getCommand("craftedmaces").setExecutor(new CraftedMacesCommand(elementManager, maceManager, craftingListener));
+
+        // Register reset command
+        getCommand("resetmaces").setExecutor(new ResetMaceCommand(elementManager, maceManager, craftingListener));
 
         // Register trust commands
         getCommand("trust").setExecutor(new TrustCommand(trustManager));
@@ -48,7 +55,7 @@ public class Main extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new MaceListener(maceManager, elementManager, trustManager), this);
         getServer().getPluginManager().registerEvents(
-                new CraftingListener(this, recipeManager, elementManager), this);
+                craftingListener, this);
         getServer().getPluginManager().registerEvents(
                 new PlayerJoinListener(elementManager), this);
         getServer().getPluginManager().registerEvents(
@@ -56,7 +63,6 @@ public class Main extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(
                 new CraftingRestrictionListener(maceManager, this), this);
-
 
         // Register recipes
         recipeManager.registerAllRecipes();
@@ -83,6 +89,7 @@ public class Main extends JavaPlugin {
         getLogger().info("- One mace per player limit enforced");
         getLogger().info("- Normal mace crafting disabled");
         getLogger().info("- Chat spam prevention active");
+        getLogger().info("- Mace crafting reset system enabled");
     }
 
     @Override
@@ -123,5 +130,9 @@ public class Main extends JavaPlugin {
 
     public PassiveEffectsListener getPassiveEffectsListener() {
         return passiveEffectsListener;
+    }
+
+    public CraftingListener getCraftingListener() {
+        return craftingListener;
     }
 }

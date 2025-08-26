@@ -58,6 +58,14 @@ commands:
     usage: /<command>
     aliases: [maces, maceinv, maceinventory]
 
+  # Reset mace crafting limits
+  resetmaces:
+    description: Reset mace crafting limits for yourself or another player
+    usage: /<command> [player] [mace_type]
+    permission: maces.reset
+    permission-message: "&cYou don't have permission to reset mace crafting limits!"
+    aliases: [resetmace, macereset, clearmaces]
+
   # Trust system commands
   trust:
     description: Send a trust request to another player
@@ -119,6 +127,7 @@ permissions:
       firemace.give: true
       watermace.give: true
       earthmace.give: true
+      maces.reset.others: true
 
   element.reroll.others:
     description: Allows rerolling other players' elements
@@ -154,6 +163,15 @@ permissions:
     description: Allows giving earth maces
     default: op
 
+  # Reset permissions
+  maces.reset:
+    description: Allows resetting own mace crafting limits
+    default: true
+
+  maces.reset.others:
+    description: Allows resetting other players' mace crafting limits
+    default: op
+
   # Player permissions
   element.reroll:
     description: Allows rerolling own element
@@ -181,6 +199,7 @@ permissions:
       maces.use: true
       maces.craft: true
       maces.trust: true
+      maces.reset: true
 
   maces.*:
     description: All mace-related permissions
@@ -189,3 +208,4 @@ permissions:
       element.admin: true
       maces.give.*: true
       maces.player: true
+      maces.reset.others: true

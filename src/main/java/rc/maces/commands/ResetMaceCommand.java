@@ -6,194 +6,146 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
 import rc.maces.listeners.CraftingListener;
 import rc.maces.managers.ElementManager;
+import rc.maces.managers.MaceManager;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+public class ResetMaceCommand implements CommandExecutor {
 
-/**
- * Command to reset mace crafting counts and player elements
- * Usage: /resetmace <element> [player]
- * Elements: air, fire, water, earth, all
- */
-public class ResetMaceCommand implements CommandExecutor, TabCompleter {
-
-    private final JavaPlugin plugin;
-    private final CraftingListener craftingListener;
     private final ElementManager elementManager;
+    private final MaceManager maceManager;
+    private final CraftingListener craftingListener;
 
-    public ResetMaceCommand(JavaPlugin plugin, CraftingListener craftingListener, ElementManager elementManager) {
-        this.plugin = plugin;
-        this.craftingListener = craftingListener;
+    public ResetMaceCommand(ElementManager elementManager, MaceManager maceManager, CraftingListener craftingListener) {
         this.elementManager = elementManager;
+        this.maceManager = maceManager;
+        this.craftingListener = craftingListener;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        // Check permission
-        if (!sender.hasPermission("maces.admin.reset")) {
-            sender.sendMessage(Component.text("❌ You don't have permission to use this command!")
-                    .color(NamedTextColor.RED));
-            return true;
-        }
-
-        if (args.length < 1 || args.length > 2) {
-            sender.sendMessage(Component.text("Usage: /resetmace <element> [player]")
-                    .color(NamedTextColor.YELLOW));
-            sender.sendMessage(Component.text("Elements: air, fire, water, earth, all")
-                    .color(NamedTextColor.GRAY));
-            return true;
-        }
-
-        String element = args[0].toLowerCase();
-        Player targetPlayer = null;
-
-        // Determine target player
-        if (args.length == 2) {
-            // Target specified player
-            targetPlayer = Bukkit.getPlayer(args[1]);
-            if (targetPlayer == null) {
-                sender.sendMessage(Component.text("❌ Player '" + args[1] + "' not found!")
-                        .color(NamedTextColor.RED));
-                return true;
-            }
-        } else {
-            // Target sender (must be a player)
+        if (args.length == 0) {
+            // Reset own maces (players only)
             if (!(sender instanceof Player)) {
-                sender.sendMessage(Component.text("❌ Console must specify a player: /resetmace <element> <player>")
+                sender.sendMessage(Component.text("❌ Console must specify a player to reset maces for!")
                         .color(NamedTextColor.RED));
                 return true;
             }
-            targetPlayer = (Player) sender;
-        }
 
-        // Validate element
-        if (!isValidElement(element)) {
-            sender.sendMessage(Component.text("❌ Invalid element! Valid elements: air, fire, water, earth, all")
-                    .color(NamedTextColor.RED));
+            Player player = (Player) sender;
+            resetPlayerMaces(player, player);
             return true;
         }
 
-        // Perform reset
-        if (element.equals("all")) {
-            resetAllMaces(sender, targetPlayer);
-        } else {
-            resetSpecificMace(sender, targetPlayer, element.toUpperCase());
+        if (args.length == 1) {
+            // Reset another player's maces (admin only)
+            if (!sender.hasPermission("element.admin")) {
+                sender.sendMessage(Component.text("❌ You don't have permission to reset other players' maces!")
+                        .color(NamedTextColor.RED));
+                return true;
+            }
+
+            Player target = Bukkit.getPlayer(args[0]);
+            if (target == null) {
+                sender.sendMessage(Component.text("❌ Player '" + args[0] + "' not found or not online!")
+                        .color(NamedTextColor.RED));
+                return true;
+            }
+
+            resetPlayerMaces(sender, target);
+            return true;
         }
 
+        if (args.length == 2) {
+            // Reset specific mace type for a player (admin only)
+            if (!sender.hasPermission("element.admin")) {
+                sender.sendMessage(Component.text("❌ You don't have permission to reset specific mace types!")
+                        .color(NamedTextColor.RED));
+                return true;
+            }
+
+            Player target = Bukkit.getPlayer(args[0]);
+            if (target == null) {
+                sender.sendMessage(Component.text("❌ Player '" + args[0] + "' not found or not online!")
+                        .color(NamedTextColor.RED));
+                return true;
+            }
+
+            String maceType = args[1].toUpperCase();
+            if (!isValidMaceType(maceType)) {
+                sender.sendMessage(Component.text("❌ Invalid mace type! Use: air, fire, water, or earth")
+                        .color(NamedTextColor.RED));
+                return true;
+            }
+
+            resetSpecificMaceType(sender, target, maceType);
+            return true;
+        }
+
+        // Too many arguments
+        sender.sendMessage(Component.text("❌ Usage: /resetmaces [player] [mace_type]")
+                .color(NamedTextColor.RED));
         return true;
     }
 
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        List<String> completions = new ArrayList<>();
+    private void resetPlayerMaces(CommandSender sender, Player target) {
+        // Reset crafting counts
+        craftingListener.resetAllPlayerMaceCounts(target.getUniqueId());
 
-        if (args.length == 1) {
-            // Element completions
-            List<String> elements = Arrays.asList("air", "fire", "water", "earth", "all");
-            String input = args[0].toLowerCase();
-            for (String element : elements) {
-                if (element.startsWith(input)) {
-                    completions.add(element);
-                }
-            }
-        } else if (args.length == 2) {
-            // Player name completions
-            String input = args[1].toLowerCase();
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                if (player.getName().toLowerCase().startsWith(input)) {
-                    completions.add(player.getName());
-                }
-            }
-        }
-
-        return completions;
-    }
-
-    /**
-     * Check if the element string is valid
-     */
-    private boolean isValidElement(String element) {
-        return element.equals("air") || element.equals("fire") ||
-                element.equals("water") || element.equals("earth") ||
-                element.equals("all");
-    }
-
-    /**
-     * Reset all maces for a player
-     */
-    private void resetAllMaces(CommandSender sender, Player targetPlayer) {
-        // Reset all mace counts
-        craftingListener.resetAllPlayerMaceCounts(targetPlayer.getUniqueId());
-
-        // Reset player element
-        elementManager.clearPlayerElement(targetPlayer);
-
-        // Send messages
-        sender.sendMessage(Component.text("✅ Reset all maces and element for " + targetPlayer.getName())
-                .color(NamedTextColor.GREEN));
-
-        if (!sender.equals(targetPlayer)) {
-            targetPlayer.sendMessage(Component.text("🔄 Your maces and element have been reset by an admin!")
-                    .color(NamedTextColor.YELLOW));
-        } else {
-            targetPlayer.sendMessage(Component.text("🔄 All your maces and element have been reset!")
+        // Send confirmation messages
+        if (sender.equals(target)) {
+            target.sendMessage(Component.text("✅ Your mace crafting limits have been reset!")
                     .color(NamedTextColor.GREEN));
-        }
-    }
-
-    /**
-     * Reset a specific mace type for a player
-     */
-    private void resetSpecificMace(CommandSender sender, Player targetPlayer, String maceType) {
-        // Reset specific mace count
-        craftingListener.resetPlayerMaceCount(targetPlayer.getUniqueId(), maceType);
-
-        // Get element display name and color
-        String displayName = getElementDisplayName(maceType);
-        NamedTextColor elementColor = getElementColor(maceType);
-
-        // Send messages
-        sender.sendMessage(Component.text("✅ Reset " + displayName.toLowerCase() + " mace for " + targetPlayer.getName())
-                .color(NamedTextColor.GREEN));
-
-        if (!sender.equals(targetPlayer)) {
-            targetPlayer.sendMessage(Component.text("🔄 Your " + displayName.toLowerCase() + " mace has been reset by an admin!")
+            target.sendMessage(Component.text("You can now craft one of each mace type again!")
                     .color(NamedTextColor.YELLOW));
         } else {
-            targetPlayer.sendMessage(Component.text("🔄 Your " + displayName.toLowerCase() + " mace has been reset!")
-                    .color(elementColor));
+            sender.sendMessage(Component.text("✅ Reset mace crafting limits for " + target.getName())
+                    .color(NamedTextColor.GREEN));
+            target.sendMessage(Component.text("🔄 Your mace crafting limits have been reset by " + sender.getName() + "!")
+                    .color(NamedTextColor.GREEN));
+            target.sendMessage(Component.text("You can now craft one of each mace type again!")
+                    .color(NamedTextColor.YELLOW));
         }
+
+        // Log the action
+        String logMessage = sender.equals(target) ?
+                target.getName() + " reset their own mace crafting limits" :
+                sender.getName() + " reset mace crafting limits for " + target.getName();
+        elementManager.getPlugin().getLogger().info(logMessage);
     }
 
-    /**
-     * Get display name for element
-     */
-    private String getElementDisplayName(String element) {
-        switch (element) {
-            case "AIR": return "Air";
-            case "FIRE": return "Fire";
-            case "WATER": return "Water";
-            case "EARTH": return "Earth";
-            default: return "Unknown";
-        }
+    private void resetSpecificMaceType(CommandSender sender, Player target, String maceType) {
+        // Reset specific mace type count
+        craftingListener.resetPlayerMaceCount(target.getUniqueId(), maceType);
+
+        String maceDisplayName = getMaceDisplayName(maceType);
+
+        // Send confirmation messages
+        sender.sendMessage(Component.text("✅ Reset " + maceDisplayName + " crafting limit for " + target.getName())
+                .color(NamedTextColor.GREEN));
+
+        target.sendMessage(Component.text("🔄 Your " + maceDisplayName + " crafting limit has been reset by " + sender.getName() + "!")
+                .color(NamedTextColor.GREEN));
+        target.sendMessage(Component.text("You can now craft the " + maceDisplayName + " again!")
+                .color(NamedTextColor.YELLOW));
+
+        // Log the action
+        elementManager.getPlugin().getLogger().info(sender.getName() + " reset " + maceDisplayName + " crafting limit for " + target.getName());
     }
 
-    /**
-     * Get color for element
-     */
-    private NamedTextColor getElementColor(String element) {
-        switch (element) {
-            case "AIR": return NamedTextColor.WHITE;
-            case "FIRE": return NamedTextColor.RED;
-            case "WATER": return NamedTextColor.BLUE;
-            case "EARTH": return NamedTextColor.GREEN;
-            default: return NamedTextColor.GRAY;
+    private boolean isValidMaceType(String maceType) {
+        return maceType.equals("AIR") || maceType.equals("FIRE") ||
+                maceType.equals("WATER") || maceType.equals("EARTH");
+    }
+
+    private String getMaceDisplayName(String maceType) {
+        switch (maceType) {
+            case "AIR": return "Air Mace";
+            case "FIRE": return "Fire Mace";
+            case "WATER": return "Water Mace";
+            case "EARTH": return "Earth Mace";
+            default: return "Unknown Mace";
         }
     }
 }
