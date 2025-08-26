@@ -19,7 +19,7 @@ import rc.maces.managers.TrustManager;
 import java.util.Collection;
 import java.util.Random;
 
-// UPDATED Meteors Ability - Drops 15 meteors in 8x8 radius with increased damage on ALL living entities (except allies)
+// NERFED Meteors Ability - Reduced damage to 2 hearts (4 damage) to work better against Protection 4 players
 public class MeteorsAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -52,7 +52,7 @@ public class MeteorsAbility extends BaseAbility {
                     return;
                 }
 
-                // UPDATED: Random location in 8x8 radius (4 blocks each direction)
+                // Random location in 8x8 radius (4 blocks each direction)
                 int randomX = random.nextInt(9) - 4; // -4 to +4
                 int randomZ = random.nextInt(9) - 4; // -4 to +4
 
@@ -92,7 +92,7 @@ public class MeteorsAbility extends BaseAbility {
         targetLoc.getWorld().spawnParticle(Particle.FLAME, targetLoc, 25);
         targetLoc.getWorld().spawnParticle(Particle.LAVA, targetLoc, 10);
 
-        // UPDATED: Deal 3 hearts (6 damage) true damage to ALL nearby living entities in 8 block range (except allies)
+        // NERFED: Deal 2 hearts (4 damage) true damage to ALL nearby living entities in 8 block range (except allies)
         Collection<Entity> nearby = targetLoc.getWorld().getNearbyEntities(targetLoc, 4, 4, 4); // 8 block range
         for (Entity entity : nearby) {
             if (entity instanceof LivingEntity && entity != caster) {
@@ -103,8 +103,8 @@ public class MeteorsAbility extends BaseAbility {
                     continue;
                 }
 
-                // True damage - bypass armor/resistance for ALL living entities
-                double newHealth = Math.max(0, living.getHealth() - 6.0);
+                // NERFED: Reduced from 6 to 4 damage (2 hearts instead of 3)
+                double newHealth = Math.max(0, living.getHealth() - 4.0);
                 living.setHealth(newHealth);
 
                 // Set fire to ALL living entities

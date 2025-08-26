@@ -42,29 +42,16 @@ public class MacePickupListener implements Listener {
                 return;
             }
 
-            // Check if player can pick up this mace type
+            // FIXED: Always change element to match the mace being picked up (no restrictions)
             String playerElement = elementManager.getPlayerElement(player);
-            boolean canPickup = false;
+            String maceElement = getMaceElement(item);
 
-            if (playerElement != null) {
-                if ((playerElement.equals("AIR") && maceManager.isAirMace(item)) ||
-                        (playerElement.equals("FIRE") && maceManager.isFireMace(item)) ||
-                        (playerElement.equals("WATER") && maceManager.isWaterMace(item)) ||
-                        (playerElement.equals("EARTH") && maceManager.isEarthMace(item))) {
-                    canPickup = true;
-                }
+            if (maceElement != null && !maceElement.equals(playerElement)) {
+                elementManager.setPlayerElement(player, maceElement);
+                player.sendMessage(Component.text("⚡ Your element has changed to " +
+                                elementManager.getElementDisplayName(maceElement) + "!")
+                        .color(elementManager.getElementColor(maceElement)));
             }
-
-            if (!canPickup) {
-                event.setCancelled(true);
-                player.sendMessage(Component.text("❌ You cannot pick up this mace! Your element is: " +
-                                elementManager.getElementDisplayName(playerElement))
-                        .color(NamedTextColor.RED));
-                return;
-            }
-
-            // If element changed, update it
-            updateElementFromMace(player, item);
         }
     }
 
@@ -109,27 +96,17 @@ public class MacePickupListener implements Listener {
         return count;
     }
 
-    private void updateElementFromMace(Player player, ItemStack mace) {
-        String newElement = null;
-
+    // Helper method to get element from mace type
+    private String getMaceElement(ItemStack mace) {
         if (maceManager.isAirMace(mace)) {
-            newElement = "AIR";
+            return "AIR";
         } else if (maceManager.isFireMace(mace)) {
-            newElement = "FIRE";
+            return "FIRE";
         } else if (maceManager.isWaterMace(mace)) {
-            newElement = "WATER";
+            return "WATER";
         } else if (maceManager.isEarthMace(mace)) {
-            newElement = "EARTH";
+            return "EARTH";
         }
-
-        if (newElement != null) {
-            String currentElement = elementManager.getPlayerElement(player);
-            if (!newElement.equals(currentElement)) {
-                elementManager.setPlayerElement(player, newElement);
-                player.sendMessage(Component.text("⚡ Your element has changed to " +
-                                elementManager.getElementDisplayName(newElement) + "!")
-                        .color(elementManager.getElementColor(newElement)));
-            }
-        }
+        return null;
     }
 }
