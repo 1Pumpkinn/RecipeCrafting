@@ -5,7 +5,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import rc.maces.abilities.air.WindShotAbility;
 import rc.maces.abilities.air.WindStruckAbility;
 import rc.maces.abilities.earth.BuddyUpAbility;
-import rc.maces.abilities.earth.VinePullAbility;
+import rc.maces.abilities.earth.VineTrapAbility;
 import rc.maces.abilities.fire.MeteorsAbility;
 import rc.maces.abilities.fire.ObsidianCreationAbility;
 import rc.maces.abilities.water.WaterGeyserAbility;
@@ -39,7 +39,7 @@ public class AbilityManager {
         registerAbility(new WaterGeyserAbility(cooldownManager, plugin, trustManager));
         //EARTH
         registerAbility(new BuddyUpAbility(cooldownManager, plugin, trustManager));
-        registerAbility(new VinePullAbility(cooldownManager, plugin, trustManager));
+        registerAbility(new VineTrapAbility(cooldownManager, plugin, trustManager));
     }
 
     private void registerAbility(BaseAbility ability) {

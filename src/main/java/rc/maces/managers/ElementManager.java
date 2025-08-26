@@ -225,6 +225,14 @@ public class ElementManager {
         }.runTaskTimer(plugin, 0L, 1L);
     }
 
+    public void clearPlayerElement(Player player) {
+        playerElements.remove(player.getUniqueId());
+        saveElementData();
+
+        player.sendMessage(Component.text("🔄 Your element has been cleared!")
+                .color(NamedTextColor.GRAY));
+    }
+
     /**
      * Finalizes the element assignment after rolling animation
      */

@@ -54,9 +54,9 @@ public class Main extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new MacePickupListener(maceManager, elementManager), this);
 
-        // ADDED: Block normal mace crafting
         getServer().getPluginManager().registerEvents(
-                new NormalMaceBlocker(), this);
+                new CraftingRestrictionListener(maceManager, this), this);
+
 
         // Register recipes
         recipeManager.registerAllRecipes();

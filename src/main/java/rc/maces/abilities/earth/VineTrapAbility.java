@@ -3,10 +3,12 @@ package rc.maces.abilities.earth;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.RayTraceResult;
 import rc.maces.abilities.BaseAbility;
 import rc.maces.managers.CooldownManager;
@@ -16,8 +18,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-// FIXED Vine Trap Ability - Now works on ALL living entities with proper range (10 blocks)
-public class VinePullAbility extends BaseAbility {
+// FIXED Vine Trap Ability - Now works on ALL living entities with proper immobilization
+public class VineTrapAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
     private final TrustManager trustManager;
@@ -32,22 +34,26 @@ public class VinePullAbility extends BaseAbility {
         final float originalWalkSpeed;
         final float originalFlySpeed;
         final long trapEndTime;
+        final BukkitTask teleportTask;
+        final BukkitTask releaseTask;
 
-        VineTrappedData(Location location, float walkSpeed, float flySpeed, long endTime) {
+        VineTrappedData(Location location, float walkSpeed, float flySpeed, long endTime, BukkitTask teleportTask, BukkitTask releaseTask) {
             this.trapLocation = location.clone();
             this.originalWalkSpeed = walkSpeed;
             this.originalFlySpeed = flySpeed;
             this.trapEndTime = endTime;
+            this.teleportTask = teleportTask;
+            this.releaseTask = releaseTask;
         }
     }
 
-    public VinePullAbility(CooldownManager cooldownManager, JavaPlugin plugin, TrustManager trustManager) {
-        super("vine_pull", 25, cooldownManager);
+    public VineTrapAbility(CooldownManager cooldownManager, JavaPlugin plugin, TrustManager trustManager) {
+        super("vine_trap", 25, cooldownManager); // Changed from vine_pull
         this.plugin = plugin;
         this.trustManager = trustManager;
 
         // Set the static plugin instance
-        VinePullAbility.pluginInstance = plugin;
+        VineTrapAbility.pluginInstance = plugin;
     }
 
     @Override
@@ -102,7 +108,7 @@ public class VinePullAbility extends BaseAbility {
         RayTraceResult result = caster.getWorld().rayTraceEntities(
                 caster.getEyeLocation(),
                 caster.getEyeLocation().getDirection(),
-                10.0, // FIXED: 10 block range
+                10.0, // 10 block range
                 entity -> entity instanceof LivingEntity && !entity.equals(caster)
         );
 
@@ -116,7 +122,7 @@ public class VinePullAbility extends BaseAbility {
     // ==================== STATIC METHODS ====================
 
     /**
-     * Check if an entity is currently trapped by Vine Pull
+     * Check if an entity is currently trapped by Vine Trap
      * @param entityId The UUID of the entity to check
      * @return true if the entity is trapped, false otherwise
      */
@@ -164,29 +170,52 @@ public class VinePullAbility extends BaseAbility {
             Player player = (Player) entity;
             originalWalkSpeed = player.getWalkSpeed();
             originalFlySpeed = player.getFlySpeed();
-        }
-
-        // Calculate trap end time
-        long trapEndTime = System.currentTimeMillis() + (durationSeconds * 1000L);
-
-        // Store trapped data
-        trappedEntities.put(entityId, new VineTrappedData(
-                trapLocation, originalWalkSpeed, originalFlySpeed, trapEndTime
-        ));
-
-        // Set speeds to 0 to prevent movement (only for players)
-        if (entity instanceof Player) {
-            Player player = (Player) entity;
+            // Set speeds to 0 to prevent movement
             player.setWalkSpeed(0f);
             player.setFlySpeed(0f);
         }
 
-        // Schedule automatic release
+        // Apply slowness and jump boost negative effects to all entities
+        entity.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, durationSeconds * 20, 255, false, false)); // Max slowness
+        entity.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, durationSeconds * 20, -10, false, false)); // Negative jump boost
+
+        // Calculate trap end time
+        long trapEndTime = System.currentTimeMillis() + (durationSeconds * 1000L);
+
+        // Create repeating task to teleport entity back to trap location every 2 ticks
+        BukkitTask teleportTask = null;
         if (pluginInstance != null) {
-            pluginInstance.getServer().getScheduler().runTaskLater(pluginInstance, () -> {
+            teleportTask = pluginInstance.getServer().getScheduler().runTaskTimer(pluginInstance, () -> {
+                if (entity.isValid() && !entity.isDead()) {
+                    Location currentLoc = entity.getLocation();
+                    Location trap = trapLocation.clone();
+
+                    // Allow head movement but keep body at trap location
+                    trap.setYaw(currentLoc.getYaw());
+                    trap.setPitch(currentLoc.getPitch());
+
+                    // Only teleport if entity has moved significantly from trap location
+                    if (currentLoc.distance(trapLocation) > 0.5) {
+                        entity.teleport(trap);
+                        // Remove any velocity
+                        entity.setVelocity(entity.getVelocity().multiply(0));
+                    }
+                }
+            }, 0L, 2L); // Run every 2 ticks (0.1 seconds)
+        }
+
+        // Schedule automatic release
+        BukkitTask releaseTask = null;
+        if (pluginInstance != null) {
+            releaseTask = pluginInstance.getServer().getScheduler().runTaskLater(pluginInstance, () -> {
                 releaseEntity(entityId);
             }, durationSeconds * 20L); // Convert seconds to ticks
         }
+
+        // Store trapped data
+        trappedEntities.put(entityId, new VineTrappedData(
+                trapLocation, originalWalkSpeed, originalFlySpeed, trapEndTime, teleportTask, releaseTask
+        ));
     }
 
     /**
@@ -197,14 +226,44 @@ public class VinePullAbility extends BaseAbility {
         VineTrappedData data = trappedEntities.remove(entityId);
 
         if (data != null) {
-            // Restore original speeds only for players
+            // Cancel the teleport task
+            if (data.teleportTask != null && !data.teleportTask.isCancelled()) {
+                data.teleportTask.cancel();
+            }
+
+            // Cancel the release task
+            if (data.releaseTask != null && !data.releaseTask.isCancelled()) {
+                data.releaseTask.cancel();
+            }
+
+            // Find the entity and restore effects
             if (pluginInstance != null) {
-                Player player = pluginInstance.getServer().getPlayer(entityId);
-                if (player != null && player.isOnline()) {
-                    player.setWalkSpeed(data.originalWalkSpeed);
-                    player.setFlySpeed(data.originalFlySpeed);
-                    player.sendMessage(Component.text("🌿 You have been freed from the vines!")
-                            .color(NamedTextColor.GREEN));
+                LivingEntity entity = null;
+
+                // Try to find the entity in all worlds
+                for (org.bukkit.World world : pluginInstance.getServer().getWorlds()) {
+                    for (LivingEntity livingEntity : world.getLivingEntities()) {
+                        if (livingEntity.getUniqueId().equals(entityId)) {
+                            entity = livingEntity;
+                            break;
+                        }
+                    }
+                    if (entity != null) break;
+                }
+
+                if (entity != null && entity.isValid() && !entity.isDead()) {
+                    // Remove trap effects
+                    entity.removePotionEffect(PotionEffectType.SLOWNESS);
+                    entity.removePotionEffect(PotionEffectType.JUMP_BOOST);
+
+                    // Restore original speeds only for players
+                    if (entity instanceof Player) {
+                        Player player = (Player) entity;
+                        player.setWalkSpeed(data.originalWalkSpeed);
+                        player.setFlySpeed(data.originalFlySpeed);
+                        player.sendMessage(Component.text("🌿 You have been freed from the vines!")
+                                .color(NamedTextColor.GREEN));
+                    }
                 }
             }
         }
@@ -226,12 +285,8 @@ public class VinePullAbility extends BaseAbility {
         trappedEntities.entrySet().removeIf(entry -> {
             boolean expired = currentTime > entry.getValue().trapEndTime;
             if (expired) {
-                // Restore player speeds if they're still online
-                Player player = pluginInstance != null ? pluginInstance.getServer().getPlayer(entry.getKey()) : null;
-                if (player != null && player.isOnline()) {
-                    player.setWalkSpeed(entry.getValue().originalWalkSpeed);
-                    player.setFlySpeed(entry.getValue().originalFlySpeed);
-                }
+                // Use releaseEntity to properly clean up
+                releaseEntity(entry.getKey());
             }
             return expired;
         });
@@ -241,7 +296,7 @@ public class VinePullAbility extends BaseAbility {
      * Force release all trapped entities (useful for plugin disable)
      */
     public static void releaseAllEntities() {
-        for (UUID entityId : trappedEntities.keySet()) {
+        for (UUID entityId : new HashMap<>(trappedEntities).keySet()) {
             releaseEntity(entityId);
         }
         trappedEntities.clear();
