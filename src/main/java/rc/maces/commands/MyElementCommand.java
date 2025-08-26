@@ -52,7 +52,7 @@ public class MyElementCommand implements CommandExecutor {
             }
         }
 
-        // Display element information in new format
+        // Display element information in improved format
         displayElementInfo(player, playerElement, hasMaceCrafted);
 
         return true;
@@ -62,79 +62,133 @@ public class MyElementCommand implements CommandExecutor {
         NamedTextColor elementColor = elementManager.getElementColor(element);
         String elementDisplay = elementManager.getElementDisplayName(element);
 
-        // Header with element name
-        player.sendMessage(Component.text("**" + elementDisplay + " Element**")
+        // Header with separator
+        player.sendMessage(Component.text("═══════════════════════════════════════")
+                .color(NamedTextColor.DARK_GRAY));
+
+        // Element name with icon
+        String elementIcon = getElementIcon(element);
+        player.sendMessage(Component.text(elementIcon + " " + elementDisplay + " Element " + elementIcon)
                 .color(elementColor)
                 .decoration(TextDecoration.BOLD, true));
 
-        // Element-specific passive abilities
+        player.sendMessage(Component.text("═══════════════════════════════════════")
+                .color(NamedTextColor.DARK_GRAY));
+
+        // Passive abilities section
+        player.sendMessage(Component.text("PASSIVE ABILITIES:")
+                .color(NamedTextColor.GOLD)
+                .decoration(TextDecoration.BOLD, true));
+
         switch (element) {
             case "AIR":
-                player.sendMessage(Component.text("Speed 1")
-                        .color(NamedTextColor.GRAY));
-                player.sendMessage(Component.text("Fall Damage Immunity")
-                        .color(NamedTextColor.GRAY));
+                player.sendMessage(Component.text("  • Speed I")
+                        .color(NamedTextColor.WHITE));
+                player.sendMessage(Component.text("  • Fall Damage Immunity")
+                        .color(NamedTextColor.WHITE));
                 break;
             case "FIRE":
-                player.sendMessage(Component.text("Fire Resistance")
-                        .color(NamedTextColor.GRAY));
-                player.sendMessage(Component.text("+1 Attack Damage when on fire")
-                        .color(NamedTextColor.GRAY));
+                player.sendMessage(Component.text("  • Fire Resistance")
+                        .color(NamedTextColor.RED));
+                player.sendMessage(Component.text("  • +1 Attack Damage when on fire")
+                        .color(NamedTextColor.RED));
                 break;
             case "WATER":
-                player.sendMessage(Component.text("Dolphins Grace 1 (in water)")
-                        .color(NamedTextColor.GRAY));
-                player.sendMessage(Component.text("Conduit Power")
-                        .color(NamedTextColor.GRAY));
+                player.sendMessage(Component.text("  • Dolphins Grace I (in water)")
+                        .color(NamedTextColor.BLUE));
+                player.sendMessage(Component.text("  • Conduit Power")
+                        .color(NamedTextColor.BLUE));
                 break;
             case "EARTH":
-                player.sendMessage(Component.text("Haste 3")
-                        .color(NamedTextColor.GRAY));
-                player.sendMessage(Component.text("Hero of the Village 1")
-                        .color(NamedTextColor.GRAY));
+                player.sendMessage(Component.text("  • Haste III")
+                        .color(NamedTextColor.GREEN));
+                player.sendMessage(Component.text("  • Hero of the Village I")
+                        .color(NamedTextColor.GREEN));
                 break;
         }
 
-        // Mace crafted status
-        String maceStatus = hasMaceCrafted ? "1/1" : "0/1";
-        player.sendMessage(Component.text("**" + elementDisplay + " Mace " + maceStatus + " Crafted**")
-                .color(elementColor)
+        player.sendMessage(Component.empty());
+
+        // Mace status section
+        String maceStatus = hasMaceCrafted ? "✓ CRAFTED" : "✗ NOT CRAFTED";
+        NamedTextColor statusColor = hasMaceCrafted ? NamedTextColor.GREEN : NamedTextColor.RED;
+
+        player.sendMessage(Component.text("MACE STATUS: ")
+                .color(NamedTextColor.GOLD)
+                .decoration(TextDecoration.BOLD, true)
+                .append(Component.text(maceStatus)
+                        .color(statusColor)
+                        .decoration(TextDecoration.BOLD, true)));
+
+        player.sendMessage(Component.empty());
+
+        // Mace abilities section
+        player.sendMessage(Component.text("MACE ABILITIES:")
+                .color(NamedTextColor.GOLD)
                 .decoration(TextDecoration.BOLD, true));
 
-        // Element-specific abilities
         switch (element) {
             case "AIR":
-                player.sendMessage(Component.text("Ability 1: Wind Shot - Shoots 1 wind charge")
+                player.sendMessage(Component.text("  Right-Click: Wind Shot")
                         .color(NamedTextColor.WHITE));
-                player.sendMessage(Component.text("Ability 2: Wind Struck - Traps enemies in cobwebs with slow falling")
-                        .color(NamedTextColor.WHITE));
-                player.sendMessage(Component.text("Passives: Enhanced wind charge pulling effect")
+                player.sendMessage(Component.text("    └ Shoots a wind charge")
                         .color(NamedTextColor.GRAY));
+                player.sendMessage(Component.text("  F Key: Wind Struck")
+                        .color(NamedTextColor.WHITE));
+                player.sendMessage(Component.text("    └ Traps enemies in cobwebs with slow falling")
+                        .color(NamedTextColor.GRAY));
+                player.sendMessage(Component.text("  Passive: Enhanced wind charge pulling")
+                        .color(NamedTextColor.WHITE));
                 break;
             case "FIRE":
-                player.sendMessage(Component.text("Ability 1: Obsidian Creation - Converts water to obsidian around enemies")
+                player.sendMessage(Component.text("  Right-Click: Obsidian Creation")
                         .color(NamedTextColor.RED));
-                player.sendMessage(Component.text("Ability 2: Meteors - Rain 15 meteors in 7x7 area")
-                        .color(NamedTextColor.RED));
-                player.sendMessage(Component.text("Passives: Ignite enemies on hit, fire immunity when holding mace")
+                player.sendMessage(Component.text("    └ Converts water to obsidian around enemies")
                         .color(NamedTextColor.GRAY));
+                player.sendMessage(Component.text("  F Key: Meteors")
+                        .color(NamedTextColor.RED));
+                player.sendMessage(Component.text("    └ Rain 15 meteors in 8x8 area")
+                        .color(NamedTextColor.GRAY));
+                player.sendMessage(Component.text("  Passive: Ignite enemies on hit, fire immunity")
+                        .color(NamedTextColor.RED));
                 break;
             case "WATER":
-                player.sendMessage(Component.text("Ability 1: Water Heal - Heals 2 hearts")
+                player.sendMessage(Component.text("  Right-Click: Water Heal")
                         .color(NamedTextColor.BLUE));
-                player.sendMessage(Component.text("Ability 2: Water Geyser - Launch nearby players up in the air")
-                        .color(NamedTextColor.BLUE));
-                player.sendMessage(Component.text("Passives: Every hit has a 1% chance to give mining fatigue")
+                player.sendMessage(Component.text("    └ Heals 2 hearts")
                         .color(NamedTextColor.GRAY));
+                player.sendMessage(Component.text("  F Key: Water Geyser")
+                        .color(NamedTextColor.BLUE));
+                player.sendMessage(Component.text("    └ Launch nearby enemies upward")
+                        .color(NamedTextColor.GRAY));
+                player.sendMessage(Component.text("  Passive: 1% chance to give mining fatigue on hit")
+                        .color(NamedTextColor.BLUE));
                 break;
             case "EARTH":
-                player.sendMessage(Component.text("Ability 1: Buddy Up - Summons protective iron golem")
+                player.sendMessage(Component.text("  Right-Click: Buddy Up")
                         .color(NamedTextColor.GREEN));
-                player.sendMessage(Component.text("Ability 2: Vine Trap - Completely immobilizes enemies for 5 seconds")
-                        .color(NamedTextColor.GREEN));
-                player.sendMessage(Component.text("Passives: All food acts like golden apples when holding mace, Haste 5 when holding")
+                player.sendMessage(Component.text("    └ Summons protective iron golem")
                         .color(NamedTextColor.GRAY));
+                player.sendMessage(Component.text("  F Key: Vine Trap")
+                        .color(NamedTextColor.GREEN));
+                player.sendMessage(Component.text("    └ Immobilizes enemies for 5 seconds")
+                        .color(NamedTextColor.GRAY));
+                player.sendMessage(Component.text("  Passive: Food acts like golden apples, Haste V when holding")
+                        .color(NamedTextColor.GREEN));
                 break;
+        }
+
+        player.sendMessage(Component.text("═══════════════════════════════════════")
+                .color(NamedTextColor.DARK_GRAY));
+    }
+
+    private String getElementIcon(String element) {
+        switch (element) {
+            case "AIR": return "💨";
+            case "FIRE": return "🔥";
+            case "WATER": return "🌊";
+            case "EARTH": return "🌍";
+            default: return "⭐";
         }
     }
 }

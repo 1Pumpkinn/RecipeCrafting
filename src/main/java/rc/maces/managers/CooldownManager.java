@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Improved CooldownManager with thread safety and better performance
+ * Fixed CooldownManager with proper cooldown handling
  */
 public class CooldownManager {
 

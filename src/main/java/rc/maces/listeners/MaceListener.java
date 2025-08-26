@@ -24,7 +24,10 @@ import rc.maces.managers.ElementManager;
 import rc.maces.managers.MaceManager;
 import rc.maces.managers.TrustManager;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 
 public class MaceListener implements Listener {
 
@@ -32,6 +35,10 @@ public class MaceListener implements Listener {
     private final ElementManager elementManager;
     private final TrustManager trustManager;
     private final Random random;
+
+    // Chat spam prevention
+    private final Map<UUID, Long> lastChatMessage = new HashMap<>();
+    private static final long CHAT_COOLDOWN = 3000; // 3 seconds
 
     public MaceListener(MaceManager maceManager, ElementManager elementManager, TrustManager trustManager) {
         this.maceManager = maceManager;
@@ -89,8 +96,11 @@ public class MaceListener implements Listener {
                 Player victim = (Player) event.getEntity();
                 if (trustManager.isTrusted(attacker, victim)) {
                     event.setCancelled(true);
-                    attacker.sendMessage(Component.text("🤝 You cannot attack your ally " + victim.getName() + "!")
-                            .color(NamedTextColor.YELLOW));
+                    // FIXED: Only send message if enough time has passed (prevent spam)
+                    if (canSendChatMessage(attacker)) {
+                        attacker.sendMessage(Component.text("🤝 You cannot attack your ally " + victim.getName() + "!")
+                                .color(NamedTextColor.YELLOW));
+                    }
                     return;
                 }
             }
@@ -104,27 +114,29 @@ public class MaceListener implements Listener {
                     return; // Skip effects for trusted players
                 }
 
-                // UPDATED: Air Mace: Apply slow falling on hit (only when holding mace)
+                // Air Mace: Apply slow falling on hit (only when holding mace)
                 if (maceManager.isAirMace(weapon)) {
                     victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 40, 0)); // 2 seconds
                 }
 
-                // UPDATED: Fire Mace: Ignite on hit (only when holding mace)
+                // Fire Mace: Ignite on hit (only when holding mace)
                 if (maceManager.isFireMace(weapon)) {
                     event.getEntity().setFireTicks(100); // Ignite victim
                 }
 
-                // UPDATED: Water Mace: 1% chance to give Mining Fatigue 3 for 2 seconds (only when holding mace)
+                // Water Mace: 1% chance to give Mining Fatigue 3 for 2 seconds (only when holding mace)
                 if (maceManager.isWaterMace(weapon)) {
                     if (random.nextInt(100) == 0) { // 1% chance (0 out of 100)
                         victim.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, 40, 2)); // 2 seconds, level 3
 
-                        // Send message to attacker
-                        attacker.sendMessage(Component.text("💧 MINING FATIGUE! 1% chance activated!")
-                                .color(NamedTextColor.BLUE));
+                        // FIXED: Only send message if enough time has passed (prevent spam)
+                        if (canSendChatMessage(attacker)) {
+                            attacker.sendMessage(Component.text("💧 Mining Fatigue activated! (1% chance)")
+                                    .color(NamedTextColor.BLUE));
+                        }
 
-                        // Send message to victim if it's a player
-                        if (victim instanceof Player) {
+                        // Send message to victim if it's a player (also with cooldown)
+                        if (victim instanceof Player && canSendChatMessage(victim)) {
                             ((Player) victim).sendMessage(Component.text("💧 You have been slowed by water magic!")
                                     .color(NamedTextColor.DARK_BLUE));
                         }
@@ -135,7 +147,7 @@ public class MaceListener implements Listener {
                 }
             }
 
-            // FIXED: Handle when summoner attacks something - make golem help
+            // Handle when summoner attacks something - make golem help
             BuddyUpAbility.handleSummonerAttack(event, attacker, trustManager);
         }
 
@@ -196,7 +208,7 @@ public class MaceListener implements Listener {
     public void onProjectileHit(ProjectileHitEvent event) {
         Projectile projectile = event.getEntity();
 
-        // UPDATED: Wind Charge pulling effect - only works when shooter has Air Mace (not just air element)
+        // Wind Charge pulling effect - only works when shooter has Air Mace
         if (projectile instanceof WindCharge && event.getHitEntity() instanceof LivingEntity) {
             LivingEntity hitEntity = (LivingEntity) event.getHitEntity();
             ProjectileSource shooter = projectile.getShooter();
@@ -209,19 +221,19 @@ public class MaceListener implements Listener {
                     return;
                 }
 
-                // UPDATED: Check if shooter has air mace in main hand or offhand ONLY (removed element check)
+                // Check if shooter has air mace in main hand or offhand ONLY
                 ItemStack mainHand = shooterPlayer.getInventory().getItemInMainHand();
                 ItemStack offHand = shooterPlayer.getInventory().getItemInOffHand();
 
                 if (maceManager.isAirMace(mainHand) || maceManager.isAirMace(offHand)) {
-                    // NERFED: Reduced pulling effect - decreased force
+                    // Reduced pulling effect - decreased force
                     Vector direction = shooterPlayer.getLocation().toVector()
                             .subtract(hitEntity.getLocation().toVector())
                             .normalize()
-                            .multiply(2.2); // REDUCED from 3.5 to 2.2
+                            .multiply(2.2); // Reduced from 3.5 to 2.2
 
                     // Reduced upward component
-                    direction.setY(1.2); // REDUCED from 1.8 to 1.2
+                    direction.setY(1.2); // Reduced from 1.8 to 1.2
 
                     hitEntity.setVelocity(direction);
 
@@ -229,14 +241,17 @@ public class MaceListener implements Listener {
                     hitEntity.getWorld().spawnParticle(Particle.CLOUD, hitEntity.getLocation(), 15);
                     hitEntity.getWorld().spawnParticle(Particle.SMOKE, hitEntity.getLocation(), 10);
 
-                    // Send message to players (including the shooter if they hit themselves)
+                    // FIXED: Only send message if enough time has passed (prevent spam)
                     if (hitEntity instanceof Player) {
-                        if (hitEntity == shooterPlayer) {
-                            ((Player) hitEntity).sendMessage(Component.text("💨 You pulled yourself with wind charge!")
-                                    .color(NamedTextColor.GRAY));
-                        } else {
-                            ((Player) hitEntity).sendMessage(Component.text("💨 Pulled into the air by wind charge!")
-                                    .color(NamedTextColor.GRAY));
+                        Player hitPlayer = (Player) hitEntity;
+                        if (canSendChatMessage(hitPlayer)) {
+                            if (hitEntity == shooterPlayer) {
+                                hitPlayer.sendMessage(Component.text("💨 You pulled yourself with wind charge!")
+                                        .color(NamedTextColor.GRAY));
+                            } else {
+                                hitPlayer.sendMessage(Component.text("💨 Pulled by wind charge!")
+                                        .color(NamedTextColor.GRAY));
+                            }
                         }
                     }
                 }
@@ -250,11 +265,28 @@ public class MaceListener implements Listener {
         ItemStack mainHand = player.getInventory().getItemInMainHand();
         ItemStack offHand = player.getInventory().getItemInOffHand();
 
-        // UPDATED: Earth Mace: All food acts like golden apples (only when holding mace)
+        // Earth Mace: All food acts like golden apples (only when holding mace)
         if (maceManager.isEarthMace(mainHand) || maceManager.isEarthMace(offHand)) {
             // Apply golden apple effects (Regeneration II for 5 seconds, Absorption for 2 minutes)
             player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 1));
             player.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 2400, 0));
         }
+    }
+
+    // ADDED: Chat spam prevention helper method
+    private boolean canSendChatMessage(LivingEntity entity) {
+        if (!(entity instanceof Player)) return true;
+
+        Player player = (Player) entity;
+        UUID playerId = player.getUniqueId();
+        long currentTime = System.currentTimeMillis();
+        Long lastMessage = lastChatMessage.get(playerId);
+
+        if (lastMessage == null || currentTime - lastMessage >= CHAT_COOLDOWN) {
+            lastChatMessage.put(playerId, currentTime);
+            return true;
+        }
+
+        return false;
     }
 }

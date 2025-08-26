@@ -2,83 +2,142 @@ name: RecipeCrafting
 version: '2.0-SNAPSHOT'
 main: rc.maces.Main
 api-version: '1.21'
-description: Elemental maces with special abilities, element roles, and optimized structure. Features BuddyUp, VinePull, ObsidianCreation, and more!
+description: Elemental maces
+author: ___Pumpkinn
+depend: []
+load: STARTUP
 
 commands:
+  # Mace giving commands
   airmace:
     description: Give an air mace to a player
     usage: /<command> <player>
-    permission: airmace.give
+    default: op
+    permission-message: "&cYou don't have permission to give air maces!"
 
   firemace:
     description: Give a fire mace to a player
     usage: /<command> <player>
-    permission: firemace.give
+    default: op
+    permission-message: "&cYou don't have permission to give fire maces!"
 
   watermace:
     description: Give a water mace to a player
     usage: /<command> <player>
-    permission: watermace.give
+    default: op
+    permission-message: "&cYou don't have permission to give water maces!"
 
   earthmace:
     description: Give an earth mace to a player
     usage: /<command> <player>
-    permission: earthmace.give
+    default: op
+    permission-message: "&cYou don't have permission to give earth maces!"
 
   # Element management commands
   element:
-    description: Admin command to manage player elements
-    usage: /<command> <check|set|info> [player] [element]
-    permission: element.admin
+    description: Admin command to manage player elements or view element info
+    usage: /<command> <check|set|info|list> [player] [element]
+    default: op
+    permission-message: "&cYou don't have permission to use element commands!"
+    aliases: [el, elem]
 
   reroll:
     description: Reroll your element or another player's element
     usage: /<command> [player]
-    permission: element.reroll
+    default: op
+    permission-message: "&cYou don't have permission to reroll elements!"
+    aliases: [elementreroll, rerollelement]
 
   myelement:
-    description: Check your current element
+    description: Check your current element and abilities
     usage: /<command>
+    aliases: [myel, element-info, elementinfo]
 
   craftedmaces:
     description: Check your crafted maces inventory
     usage: /<command>
+    aliases: [maces, maceinv, maceinventory]
 
   # Trust system commands
   trust:
     description: Send a trust request to another player
     usage: /<command> <player>
+    permission: maces.trust
+    permission-message: "&cYou don't have permission to use the trust system!"
 
   untrust:
     description: Remove trust with another player
     usage: /<command> <player>
+    permission: maces.trust
+    permission-message: "&cYou don't have permission to use the trust system!"
+    aliases: [distrust, removetrust]
 
   trustlist:
     description: List all your trusted allies
     usage: /<command>
-    aliases: [allies, trustallies]
+    permission: maces.trust
+    permission-message: "&cYou don't have permission to use the trust system!"
+    aliases: [allies, trustallies, trustedplayers]
 
   trustaccept:
     description: Accept a pending trust request
-    usage: /<command>
-    aliases: [accepttrust]
+    usage: /<command> [player]
+    permission: maces.trust
+    permission-message: "&cYou don't have permission to use the trust system!"
+    aliases: [accepttrust, trustyes]
 
   trustdeny:
     description: Deny a pending trust request
+    usage: /<command> [player]
+    permission: maces.trust
+    permission-message: "&cYou don't have permission to use the trust system!"
+    aliases: [denytrust, rejecttrust, trustno]
+
+  # Utility commands
+  macereload:
+    description: Reload plugin configuration
     usage: /<command>
-    aliases: [denytrust, rejecttrust]
+    permission: element.admin
+    permission-message: "&cYou don't have permission to reload the plugin!"
+    aliases: [rcreload, reloadmaces]
+
+  macehelp:
+    description: Show help information for mace commands
+    usage: /<command> [topic]
+    aliases: [maceinfo, rhelp]
 
 permissions:
   # Admin permissions
   element.admin:
-    description: Allows managing all player elements
+    description: Allows full management of all player elements and plugin administration
     default: op
+    children:
+      element.use: true
+      element.reroll: true
+      element.reroll.others: true
+      airmace.give: true
+      firemace.give: true
+      watermace.give: true
+      earthmace.give: true
 
   element.reroll.others:
     description: Allows rerolling other players' elements
     default: op
 
+  element.use:
+    description: Allows using element commands (info, check, list)
+    default: true
+
   # Mace giving permissions
+  maces.give.*:
+    description: Allows giving all types of maces
+    default: op
+    children:
+      airmace.give: true
+      firemace.give: true
+      watermace.give: true
+      earthmace.give: true
+
   airmace.give:
     description: Allows giving air maces
     default: op
@@ -111,3 +170,22 @@ permissions:
   maces.trust:
     description: Allows using trust system
     default: true
+
+  # Convenience permission groups
+  maces.player:
+    description: Standard player permissions for mace usage
+    default: true
+    children:
+      element.use: true
+      element.reroll: true
+      maces.use: true
+      maces.craft: true
+      maces.trust: true
+
+  maces.*:
+    description: All mace-related permissions
+    default: op
+    children:
+      element.admin: true
+      maces.give.*: true
+      maces.player: true

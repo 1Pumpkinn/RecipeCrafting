@@ -6,6 +6,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 import rc.maces.managers.ElementManager;
 import rc.maces.managers.MaceManager;
@@ -29,40 +30,105 @@ public class MacePickupListener implements Listener {
         Player player = (Player) event.getEntity();
         ItemStack item = event.getItem().getItemStack();
 
-        // Check if the item is a custom mace
         if (maceManager.isCustomMace(item)) {
-            // Check if player already has any custom mace
-            boolean hasAnyMace = false;
-            for (ItemStack invItem : player.getInventory().getContents()) {
-                if (maceManager.isCustomMace(invItem)) {
-                    hasAnyMace = true;
-                    break;
+            // Count existing maces in inventory
+            int maceCount = countMaces(player);
+
+            if (maceCount >= 1) {
+                // Cancel pickup and drop the mace
+                event.setCancelled(true);
+                player.sendMessage(Component.text("⚠️ You can only carry one mace at a time!")
+                        .color(NamedTextColor.YELLOW));
+                return;
+            }
+
+            // Check if player can pick up this mace type
+            String playerElement = elementManager.getPlayerElement(player);
+            boolean canPickup = false;
+
+            if (playerElement != null) {
+                if ((playerElement.equals("AIR") && maceManager.isAirMace(item)) ||
+                        (playerElement.equals("FIRE") && maceManager.isFireMace(item)) ||
+                        (playerElement.equals("WATER") && maceManager.isWaterMace(item)) ||
+                        (playerElement.equals("EARTH") && maceManager.isEarthMace(item))) {
+                    canPickup = true;
                 }
             }
 
-            // If player already has a mace, cancel pickup
-            if (hasAnyMace) {
+            if (!canPickup) {
                 event.setCancelled(true);
-                player.sendMessage(Component.text("❌ You can only have one mace at a time!")
+                player.sendMessage(Component.text("❌ You cannot pick up this mace! Your element is: " +
+                                elementManager.getElementDisplayName(playerElement))
                         .color(NamedTextColor.RED));
                 return;
             }
 
-            // Determine which mace type was picked up and switch element
-            String maceElement = null;
-            if (maceManager.isAirMace(item)) {
-                maceElement = "AIR";
-            } else if (maceManager.isFireMace(item)) {
-                maceElement = "FIRE";
-            } else if (maceManager.isWaterMace(item)) {
-                maceElement = "WATER";
-            } else if (maceManager.isEarthMace(item)) {
-                maceElement = "EARTH";
-            }
+            // If element changed, update it
+            updateElementFromMace(player, item);
+        }
+    }
 
-            if (maceElement != null) {
-                // Switch player's element to match the picked up mace
-                elementManager.switchElementToMace(player, maceElement);
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) {
+            return;
+        }
+
+        Player player = (Player) event.getWhoClicked();
+        ItemStack clickedItem = event.getCurrentItem();
+        ItemStack cursorItem = event.getCursor();
+
+        // Check if player is trying to move a mace into their inventory
+        if (clickedItem != null && maceManager.isCustomMace(clickedItem)) {
+            // Check if they already have a mace
+            if (countMaces(player) >= 1 && !event.getClickedInventory().equals(player.getInventory())) {
+                event.setCancelled(true);
+                player.sendMessage(Component.text("⚠️ You can only carry one mace at a time!")
+                        .color(NamedTextColor.YELLOW));
+                return;
+            }
+        }
+
+        if (cursorItem != null && maceManager.isCustomMace(cursorItem)) {
+            if (countMaces(player) >= 1 && event.getClickedInventory().equals(player.getInventory())) {
+                event.setCancelled(true);
+                player.sendMessage(Component.text("⚠️ You can only carry one mace at a time!")
+                        .color(NamedTextColor.YELLOW));
+                return;
+            }
+        }
+    }
+
+    private int countMaces(Player player) {
+        int count = 0;
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (item != null && maceManager.isCustomMace(item)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private void updateElementFromMace(Player player, ItemStack mace) {
+        String newElement = null;
+
+        if (maceManager.isAirMace(mace)) {
+            newElement = "AIR";
+        } else if (maceManager.isFireMace(mace)) {
+            newElement = "FIRE";
+        } else if (maceManager.isWaterMace(mace)) {
+            newElement = "WATER";
+        } else if (maceManager.isEarthMace(mace)) {
+            newElement = "EARTH";
+        }
+
+        if (newElement != null) {
+            String currentElement = elementManager.getPlayerElement(player);
+            if (!newElement.equals(currentElement)) {
+                elementManager.setPlayerElement(player, newElement);
+                player.sendMessage(Component.text("⚡ Your element has changed to " +
+                                elementManager.getElementDisplayName(newElement) + "!")
+                        .color(elementManager.getElementColor(newElement)));
             }
         }
     }

@@ -108,9 +108,12 @@ public class ElementManager {
         // Check if player already has an element
         if (playerElements.containsKey(playerId)) {
             String existingElement = playerElements.get(playerId);
-            // Send welcome back message
-            Component message = createWelcomeBackMessage(existingElement, player.getName());
-            player.sendMessage(message);
+            // FIXED: Send simple welcome back message without mace abilities spam
+            player.sendMessage(Component.text("🌟 Welcome back! Your element is ")
+                    .color(NamedTextColor.GOLD)
+                    .append(Component.text(getElementDisplayName(existingElement))
+                            .color(getElementColor(existingElement))
+                            .decoration(TextDecoration.BOLD, true)));
             plugin.getLogger().info("Player " + player.getName() + " rejoined with existing element: " + existingElement);
             return;
         }
@@ -149,11 +152,8 @@ public class ElementManager {
         playerElements.put(playerId, maceElement);
         saveElementData();
 
-        // Send notification
-        player.sendMessage(Component.text("⚡ ELEMENT SWITCHED! ⚡")
-                .color(NamedTextColor.GOLD)
-                .decoration(TextDecoration.BOLD, true));
-        player.sendMessage(Component.text("Your element changed to: ")
+        // FIXED: Send simple notification without mace abilities spam
+        player.sendMessage(Component.text("⚡ Your element changed to ")
                 .color(NamedTextColor.YELLOW)
                 .append(Component.text(getElementDisplayName(maceElement))
                         .color(getElementColor(maceElement))
@@ -254,10 +254,24 @@ public class ElementManager {
         final String resultElement = finalElement;
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            // FIXED: Send simple assignment message without mace abilities spam
             Component finalMessage = rerolling ?
-                    createElementRerollMessage(resultElement, prevElement, target.getName()) :
-                    createElementAssignmentMessage(resultElement, target.getName());
+                    Component.text("🎲 ELEMENT REROLLED! ")
+                            .color(NamedTextColor.GOLD)
+                            .decoration(TextDecoration.BOLD, true)
+                            .append(Component.text("(" + getElementDisplayName(prevElement) + " → " + getElementDisplayName(resultElement) + ")")
+                                    .color(getElementColor(resultElement))
+                                    .decoration(TextDecoration.BOLD, true)) :
+                    Component.text("⚡ ELEMENT ASSIGNED! ")
+                            .color(NamedTextColor.GOLD)
+                            .decoration(TextDecoration.BOLD, true)
+                            .append(Component.text(getElementDisplayName(resultElement))
+                                    .color(getElementColor(resultElement))
+                                    .decoration(TextDecoration.BOLD, true));
+
             target.sendMessage(finalMessage);
+            target.sendMessage(Component.text("Use /myelement to see your abilities and passives!")
+                    .color(NamedTextColor.AQUA));
 
             Component title = rerolling ?
                     Component.text("ELEMENT REROLLED!")
@@ -360,7 +374,7 @@ public class ElementManager {
                         .appendNewline()
                         .append(Component.text("🌊 PASSIVES:").color(NamedTextColor.BLUE).decoration(TextDecoration.BOLD, true))
                         .appendNewline()
-                        .append(Component.text("• Nearby enemies drown in 4x4 area").color(NamedTextColor.GRAY))
+                        .append(Component.text("• 1% chance Mining Fatigue on hit").color(NamedTextColor.GRAY))
                         .appendNewline()
                         .append(Component.text("• Dolphins Grace in water").color(NamedTextColor.GRAY))
                         .appendNewline()
@@ -420,7 +434,7 @@ public class ElementManager {
                 .appendNewline()
                 .append(Component.text("🔥 Fire - Fire Resistance, +1 Attack when burning").color(NamedTextColor.RED))
                 .appendNewline()
-                .append(Component.text("🌊 Water - Drowning aura, Dolphins Grace, Conduit Power").color(NamedTextColor.BLUE))
+                .append(Component.text("🌊 Water - 1% Mining Fatigue, Dolphins Grace, Conduit Power").color(NamedTextColor.BLUE))
                 .appendNewline()
                 .append(Component.text("🌍 Earth - Hero of Village, Haste 3, Golden apple food").color(NamedTextColor.GREEN))
                 .appendNewline()
@@ -429,59 +443,6 @@ public class ElementManager {
                 .append(Component.text("═══════════════════════════").color(NamedTextColor.DARK_GRAY))
                 .appendNewline()
                 .append(Component.text("Use /element <element> to see detailed info!").color(NamedTextColor.YELLOW));
-    }
-
-    private Component createWelcomeBackMessage(String element, String playerName) {
-        return Component.text("🌟 WELCOME BACK! 🌟")
-                .color(NamedTextColor.GOLD)
-                .decoration(TextDecoration.BOLD, true)
-                .appendNewline()
-                .append(Component.text("Player: ").color(NamedTextColor.YELLOW))
-                .append(Component.text(playerName).color(NamedTextColor.WHITE))
-                .appendNewline()
-                .append(Component.text("Your Element: ").color(NamedTextColor.YELLOW))
-                .append(Component.text(getElementDisplayName(element))
-                        .color(getElementColor(element))
-                        .decoration(TextDecoration.BOLD, true))
-                .appendNewline()
-                .append(Component.text("You can only craft the " + element.toLowerCase() + " mace!")
-                        .color(NamedTextColor.GRAY))
-                .appendNewline()
-                .append(Component.text("Use /myelement for detailed info!").color(NamedTextColor.AQUA));
-    }
-
-    private Component createElementAssignmentMessage(String element, String playerName) {
-        return Component.text("⚡ ELEMENT ASSIGNMENT COMPLETE! ⚡")
-                .color(NamedTextColor.GOLD)
-                .decoration(TextDecoration.BOLD, true)
-                .appendNewline()
-                .append(getDetailedElementInfo(element));
-    }
-
-    private Component createElementRerollMessage(String newElement, String oldElement, String playerName) {
-        return Component.text("🎲 ELEMENT REROLL COMPLETE! 🎲")
-                .color(NamedTextColor.GOLD)
-                .decoration(TextDecoration.BOLD, true)
-                .appendNewline()
-                .append(Component.text("═══════════════════════════").color(NamedTextColor.DARK_GRAY))
-                .appendNewline()
-                .append(Component.text("Player: ").color(NamedTextColor.YELLOW))
-                .append(Component.text(playerName).color(NamedTextColor.WHITE).decoration(TextDecoration.BOLD, true))
-                .appendNewline()
-                .append(Component.text("Previous Element: ").color(NamedTextColor.GRAY))
-                .append(Component.text(getElementDisplayName(oldElement)).color(NamedTextColor.DARK_GRAY))
-                .appendNewline()
-                .append(Component.text("NEW Element: ").color(NamedTextColor.YELLOW))
-                .append(Component.text(getElementDisplayName(newElement))
-                        .color(getElementColor(newElement))
-                        .decoration(TextDecoration.BOLD, true))
-                .appendNewline()
-                .append(getDetailedElementInfo(newElement));
-    }
-
-    @Deprecated
-    public void removePlayerElement(Player player) {
-        // kept for compatibility
     }
 
     public void saveAllData() {
@@ -497,8 +458,12 @@ public class ElementManager {
         if (isValidElement(element)) {
             playerElements.put(player.getUniqueId(), element.toUpperCase());
             saveElementData();
-            Component message = createElementAssignmentMessage(element.toUpperCase(), player.getName());
-            player.sendMessage(message);
+            // FIXED: Simple message without mace abilities spam
+            player.sendMessage(Component.text("⚡ Your element has been set to ")
+                    .color(NamedTextColor.GOLD)
+                    .append(Component.text(getElementDisplayName(element.toUpperCase()))
+                            .color(getElementColor(element.toUpperCase()))
+                            .decoration(TextDecoration.BOLD, true)));
         }
     }
 
@@ -513,5 +478,10 @@ public class ElementManager {
 
     public JavaPlugin getPlugin() {
         return plugin;
+    }
+
+    @Deprecated
+    public void removePlayerElement(Player player) {
+        // kept for compatibility
     }
 }

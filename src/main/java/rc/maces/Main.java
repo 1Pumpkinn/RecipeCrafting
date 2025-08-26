@@ -14,7 +14,7 @@ public class Main extends JavaPlugin {
     private MaceManager maceManager;
     private RecipeManager recipeManager;
     private TrustManager trustManager;
-    private PassiveEffectsListener passiveEffectsListener; // FIXED: Store reference
+    private PassiveEffectsListener passiveEffectsListener;
 
     @Override
     public void onEnable() {
@@ -24,7 +24,6 @@ public class Main extends JavaPlugin {
         trustManager = new TrustManager(this);
         maceManager = new MaceManager(this, cooldownManager, trustManager);
         recipeManager = new RecipeManager(this, maceManager);
-
 
         // Register mace commands
         getCommand("airmace").setExecutor(new AirmaceCommand(maceManager));
@@ -55,13 +54,17 @@ public class Main extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new MacePickupListener(maceManager, elementManager), this);
 
+        // ADDED: Block normal mace crafting
+        getServer().getPluginManager().registerEvents(
+                new NormalMaceBlocker(), this);
+
         // Register recipes
         recipeManager.registerAllRecipes();
 
         // Start action bar task
         new ActionBarTask(maceManager).runTaskTimer(this, 0L, 1L);
 
-        // FIXED: Create and store PassiveEffectsListener reference
+        // Create and store PassiveEffectsListener reference
         passiveEffectsListener = new PassiveEffectsListener(maceManager, elementManager, trustManager);
         passiveEffectsListener.runTaskTimer(this, 0L, 20L); // Every second
 
@@ -78,6 +81,8 @@ public class Main extends JavaPlugin {
         getLogger().info("- Real-time ability status display");
         getLogger().info("- Auto element switching when picking up maces");
         getLogger().info("- One mace per player limit enforced");
+        getLogger().info("- Normal mace crafting disabled");
+        getLogger().info("- Chat spam prevention active");
     }
 
     @Override
@@ -116,7 +121,6 @@ public class Main extends JavaPlugin {
         return trustManager;
     }
 
-    // ADDED: Getter for PassiveEffectsListener if needed elsewhere
     public PassiveEffectsListener getPassiveEffectsListener() {
         return passiveEffectsListener;
     }
