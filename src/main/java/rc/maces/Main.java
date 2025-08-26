@@ -63,6 +63,8 @@ public class Main extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(
                 new CraftingRestrictionListener(maceManager, this), this);
+        getServer().getPluginManager().registerEvents(
+                new HeavyCoreMonitor(this), this);
 
         // Register recipes
         recipeManager.registerAllRecipes();
