@@ -23,11 +23,10 @@ public class MacePickupListener implements Listener {
 
     @EventHandler
     public void onEntityPickupItem(EntityPickupItemEvent event) {
-        if (!(event.getEntity() instanceof Player)) {
+        if (!(event.getEntity() instanceof Player player)) {
             return;
         }
 
-        Player player = (Player) event.getEntity();
         ItemStack item = event.getItem().getItemStack();
 
         if (maceManager.isCustomMace(item)) {
@@ -35,19 +34,21 @@ public class MacePickupListener implements Listener {
             int maceCount = countMaces(player);
 
             if (maceCount >= 1) {
-                // Cancel pickup and drop the mace
+                // Cancel pickup and notify
                 event.setCancelled(true);
                 player.sendMessage(Component.text("⚠️ You can only carry one mace at a time!")
                         .color(NamedTextColor.YELLOW));
                 return;
             }
 
-            // FIXED: Always change element to match the mace being picked up (no restrictions)
+            // Always change element to match the mace
             String playerElement = elementManager.getPlayerElement(player);
             String maceElement = getMaceElement(item);
 
             if (maceElement != null && !maceElement.equals(playerElement)) {
                 elementManager.setPlayerElement(player, maceElement);
+
+                // Send only one clean message
                 player.sendMessage(Component.text("⚡ Your element has changed to " +
                                 elementManager.getElementDisplayName(maceElement) + "!")
                         .color(elementManager.getElementColor(maceElement)));
@@ -57,17 +58,15 @@ public class MacePickupListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) {
+        if (!(event.getWhoClicked() instanceof Player player)) {
             return;
         }
 
-        Player player = (Player) event.getWhoClicked();
         ItemStack clickedItem = event.getCurrentItem();
         ItemStack cursorItem = event.getCursor();
 
         // Check if player is trying to move a mace into their inventory
         if (clickedItem != null && maceManager.isCustomMace(clickedItem)) {
-            // Check if they already have a mace
             if (countMaces(player) >= 1 && !event.getClickedInventory().equals(player.getInventory())) {
                 event.setCancelled(true);
                 player.sendMessage(Component.text("⚠️ You can only carry one mace at a time!")
@@ -81,7 +80,6 @@ public class MacePickupListener implements Listener {
                 event.setCancelled(true);
                 player.sendMessage(Component.text("⚠️ You can only carry one mace at a time!")
                         .color(NamedTextColor.YELLOW));
-                return;
             }
         }
     }

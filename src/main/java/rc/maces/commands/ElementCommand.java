@@ -60,7 +60,7 @@ public class ElementCommand implements CommandExecutor {
                 player.sendMessage(Component.text("✅ Set " + target.getName() + "'s element to " +
                                 elementManager.getElementDisplayName(newElement))
                         .color(NamedTextColor.GREEN));
-                target.sendMessage(Component.text("⚡ Your element has been set to " +
+                target.sendMessage(Component.text("⚡ Your element has changed to " +
                                 elementManager.getElementDisplayName(newElement) + "!")
                         .color(elementManager.getElementColor(newElement)));
                 return true;

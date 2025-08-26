@@ -63,41 +63,41 @@ public class VineTrapAbility extends BaseAbility {
             return; // Don't spam chat with cooldown messages
         }
 
-        // Get target living entity (including mobs)
-        LivingEntity target = getTargetLivingEntity(player);
-
-        if (target == null) {
-            return; // Don't spam chat if no target
-        }
-
-        // Check if target is the same as caster
-        if (target.equals(player)) {
-            return; // Don't spam chat
-        }
-
-        // Check trust/permission - prevent using ability on trusted allies (only for players)
-        if (target instanceof Player && trustManager.isTrusted(player, (Player) target)) {
-            return; // Don't spam chat
-        }
-
-        // Check if target is already trapped
-        if (isEntityTrapped(target.getUniqueId())) {
-            return; // Don't spam chat
-        }
-
-        // Trap the target for 5 seconds
-        trapEntity(target, 5);
-
-        // Send messages only once per use
+        // Always put ability on cooldown + show activation message
         player.sendMessage(Component.text("🌿 Vine Trap activated!")
                 .color(NamedTextColor.GREEN));
+        setCooldown(player);
+
+        // Try to find target
+        LivingEntity target = getTargetLivingEntity(player);
+
+        // If no target, just end here (ability still used)
+        if (target == null) {
+            return;
+        }
+
+        // Prevent self-targeting
+        if (target.equals(player)) {
+            return;
+        }
+
+        // Prevent targeting trusted players
+        if (target instanceof Player && trustManager.isTrusted(player, (Player) target)) {
+            return;
+        }
+
+        // Prevent re-trapping
+        if (isEntityTrapped(target.getUniqueId())) {
+            return;
+        }
+
+        // Trap the target
+        trapEntity(target, 5);
 
         if (target instanceof Player) {
             ((Player) target).sendMessage(Component.text("🌿 You have been trapped by vines!")
                     .color(NamedTextColor.DARK_GREEN));
         }
-
-        setCooldown(player);
     }
 
     /**
@@ -121,11 +121,6 @@ public class VineTrapAbility extends BaseAbility {
 
     // ==================== STATIC METHODS ====================
 
-    /**
-     * Check if an entity is currently trapped by Vine Trap
-     * @param entityId The UUID of the entity to check
-     * @return true if the entity is trapped, false otherwise
-     */
     public static boolean isEntityTrapped(UUID entityId) {
         if (!trappedEntities.containsKey(entityId)) {
             return false;
@@ -143,21 +138,11 @@ public class VineTrapAbility extends BaseAbility {
         return true;
     }
 
-    /**
-     * Get the trap location for a trapped entity
-     * @param entityId The UUID of the entity
-     * @return The location where the entity is trapped, or null if not trapped
-     */
     public static Location getTrapLocation(UUID entityId) {
         VineTrappedData data = trappedEntities.get(entityId);
         return data != null ? data.trapLocation.clone() : null;
     }
 
-    /**
-     * Trap a living entity at their current location
-     * @param entity The living entity to trap
-     * @param durationSeconds How long to trap them for
-     */
     public static void trapEntity(LivingEntity entity, int durationSeconds) {
         UUID entityId = entity.getUniqueId();
         Location trapLocation = entity.getLocation();
@@ -176,8 +161,8 @@ public class VineTrapAbility extends BaseAbility {
         }
 
         // Apply slowness and jump boost negative effects to all entities
-        entity.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, durationSeconds * 20, 255, false, false)); // Max slowness
-        entity.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, durationSeconds * 20, -10, false, false)); // Negative jump boost
+        entity.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, durationSeconds * 20, 255, false, false));
+        entity.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, durationSeconds * 20, -10, false, false));
 
         // Calculate trap end time
         long trapEndTime = System.currentTimeMillis() + (durationSeconds * 1000L);
@@ -190,18 +175,15 @@ public class VineTrapAbility extends BaseAbility {
                     Location currentLoc = entity.getLocation();
                     Location trap = trapLocation.clone();
 
-                    // Allow head movement but keep body at trap location
                     trap.setYaw(currentLoc.getYaw());
                     trap.setPitch(currentLoc.getPitch());
 
-                    // Only teleport if entity has moved significantly from trap location
                     if (currentLoc.distance(trapLocation) > 0.5) {
                         entity.teleport(trap);
-                        // Remove any velocity
                         entity.setVelocity(entity.getVelocity().multiply(0));
                     }
                 }
-            }, 0L, 2L); // Run every 2 ticks (0.1 seconds)
+            }, 0L, 2L);
         }
 
         // Schedule automatic release
@@ -209,38 +191,28 @@ public class VineTrapAbility extends BaseAbility {
         if (pluginInstance != null) {
             releaseTask = pluginInstance.getServer().getScheduler().runTaskLater(pluginInstance, () -> {
                 releaseEntity(entityId);
-            }, durationSeconds * 20L); // Convert seconds to ticks
+            }, durationSeconds * 20L);
         }
 
-        // Store trapped data
         trappedEntities.put(entityId, new VineTrappedData(
                 trapLocation, originalWalkSpeed, originalFlySpeed, trapEndTime, teleportTask, releaseTask
         ));
     }
 
-    /**
-     * Release a trapped entity
-     * @param entityId The UUID of the entity to release
-     */
     public static void releaseEntity(UUID entityId) {
         VineTrappedData data = trappedEntities.remove(entityId);
 
         if (data != null) {
-            // Cancel the teleport task
             if (data.teleportTask != null && !data.teleportTask.isCancelled()) {
                 data.teleportTask.cancel();
             }
-
-            // Cancel the release task
             if (data.releaseTask != null && !data.releaseTask.isCancelled()) {
                 data.releaseTask.cancel();
             }
 
-            // Find the entity and restore effects
             if (pluginInstance != null) {
                 LivingEntity entity = null;
 
-                // Try to find the entity in all worlds
                 for (org.bukkit.World world : pluginInstance.getServer().getWorlds()) {
                     for (LivingEntity livingEntity : world.getLivingEntities()) {
                         if (livingEntity.getUniqueId().equals(entityId)) {
@@ -252,11 +224,9 @@ public class VineTrapAbility extends BaseAbility {
                 }
 
                 if (entity != null && entity.isValid() && !entity.isDead()) {
-                    // Remove trap effects
                     entity.removePotionEffect(PotionEffectType.SLOWNESS);
                     entity.removePotionEffect(PotionEffectType.JUMP_BOOST);
 
-                    // Restore original speeds only for players
                     if (entity instanceof Player) {
                         Player player = (Player) entity;
                         player.setWalkSpeed(data.originalWalkSpeed);
@@ -269,32 +239,21 @@ public class VineTrapAbility extends BaseAbility {
         }
     }
 
-    /**
-     * Get all currently trapped entities (for cleanup/debugging)
-     * @return Map of trapped entities
-     */
     public static Map<UUID, VineTrappedData> getTrappedEntities() {
         return new HashMap<>(trappedEntities);
     }
 
-    /**
-     * Clean up expired traps (should be called periodically)
-     */
     public static void cleanupExpiredTraps() {
         long currentTime = System.currentTimeMillis();
         trappedEntities.entrySet().removeIf(entry -> {
             boolean expired = currentTime > entry.getValue().trapEndTime;
             if (expired) {
-                // Use releaseEntity to properly clean up
                 releaseEntity(entry.getKey());
             }
             return expired;
         });
     }
 
-    /**
-     * Force release all trapped entities (useful for plugin disable)
-     */
     public static void releaseAllEntities() {
         for (UUID entityId : new HashMap<>(trappedEntities).keySet()) {
             releaseEntity(entityId);
@@ -302,19 +261,10 @@ public class VineTrapAbility extends BaseAbility {
         trappedEntities.clear();
     }
 
-    /**
-     * Check if any entities are currently trapped
-     * @return true if there are trapped entities, false otherwise
-     */
     public static boolean hasTrappedEntities() {
         return !trappedEntities.isEmpty();
     }
 
-    /**
-     * Get the remaining trap time for an entity in seconds
-     * @param entityId The UUID of the entity
-     * @return remaining time in seconds, or -1 if not trapped
-     */
     public static int getRemainingTrapTime(UUID entityId) {
         VineTrappedData data = trappedEntities.get(entityId);
         if (data == null) {

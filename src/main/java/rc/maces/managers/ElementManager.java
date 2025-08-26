@@ -463,7 +463,7 @@ public class ElementManager {
     }
 
     public void setPlayerElement(Player player, String element) {
-        if (isValidElement(element)) {
+        playerElements.put(player.getUniqueId(), element); {
             playerElements.put(player.getUniqueId(), element.toUpperCase());
             saveElementData();
             // FIXED: Simple message without mace abilities spam
