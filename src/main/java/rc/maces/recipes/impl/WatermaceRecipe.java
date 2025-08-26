@@ -33,10 +33,13 @@ public class WatermaceRecipe implements CustomRecipe {
         ItemStack result = maceManager.createWaterMace();
 
         ShapedRecipe recipe = new ShapedRecipe(recipeKey, result);
-        recipe.shape("WNW", "WHW", "WBW");
-        recipe.setIngredient('W', Material.WATER_BUCKET);
-        recipe.setIngredient('N', Material.NAUTILUS_SHELL);
+        recipe.shape("WCW", "THF", "QBQ");
+        recipe.setIngredient('C', Material.CONDUIT);
+        recipe.setIngredient('W', Material.TROPICAL_FISH);
+        recipe.setIngredient('T', Material.TUBE_CORAL);
+        recipe.setIngredient('F', Material.FIRE_CORAL);
         recipe.setIngredient('H', Material.HEAVY_CORE);
+        recipe.setIngredient('Q', Material.TRIDENT);
         recipe.setIngredient('B', Material.BREEZE_ROD);
 
         return recipe;

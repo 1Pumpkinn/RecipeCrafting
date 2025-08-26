@@ -6,8 +6,10 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.CraftItemEvent;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.ShapedRecipe;
@@ -45,7 +47,7 @@ public class CraftingListener implements Listener {
         loadMaceData();
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGH)
     public void onCraftItem(CraftItemEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) {
             return;
@@ -59,6 +61,17 @@ public class CraftingListener implements Listener {
 
             if (recipeManager.isCustomRecipe(shapedRecipe.getKey())) {
                 Player player = (Player) event.getWhoClicked();
+
+                // PREVENT CRAFTING IN CRAFTERS - Only allow crafting table
+                if (event.getInventory().getType() == InventoryType.CRAFTER) {
+                    event.setCancelled(true);
+                    player.sendMessage(Component.text("❌ Elemental maces can only be crafted in a crafting table!")
+                            .color(NamedTextColor.RED));
+                    player.sendMessage(Component.text("Use a regular crafting table, not a crafter block!")
+                            .color(NamedTextColor.YELLOW));
+                    return;
+                }
+
                 String playerElement = elementManager.getPlayerElement(player);
 
                 // Check if player can craft this mace based on their element
