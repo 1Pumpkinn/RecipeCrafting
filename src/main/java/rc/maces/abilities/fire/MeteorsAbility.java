@@ -29,7 +29,7 @@ public class MeteorsAbility extends BaseAbility {
     private final Random random = new Random();
 
     public MeteorsAbility(CooldownManager cooldownManager, JavaPlugin plugin, TrustManager trustManager) {
-        super("meteors", 25, cooldownManager);
+        super("meteors", 15, cooldownManager);
         this.plugin = plugin;
         this.trustManager = trustManager;
     }
@@ -139,8 +139,11 @@ public class MeteorsAbility extends BaseAbility {
                 }
 
                 affectedCount++; // Count this entity as affected
+
+                // REMOVED: Individual damage messages to reduce spam
             }
-        }}
+        }
+    }
 
     private double calculateDamage(LivingEntity living) {
         // Default damage for mobs

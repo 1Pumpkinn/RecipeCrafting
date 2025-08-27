@@ -87,6 +87,27 @@ public class MaceListener implements Listener {
 
     @EventHandler
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+        // NEW: Handle Wind Charge damage protection for allies
+        if (event.getDamager() instanceof WindCharge) {
+            WindCharge windCharge = (WindCharge) event.getDamager();
+            ProjectileSource shooter = windCharge.getShooter();
+
+            if (shooter instanceof Player && event.getEntity() instanceof Player) {
+                Player shooterPlayer = (Player) shooter;
+                Player targetPlayer = (Player) event.getEntity();
+
+                // Don't cancel damage if player hits themselves
+                if (!shooterPlayer.equals(targetPlayer)) {
+                    // Check trust system - prevent wind charge damage between allies
+                    if (trustManager.isTrusted(shooterPlayer, targetPlayer)) {
+                        event.setCancelled(true);
+                        // No chat message to avoid spam - allies will still get the visual/knockback effects
+                        return;
+                    }
+                }
+            }
+        }
+
         if (event.getDamager() instanceof Player) {
             Player attacker = (Player) event.getDamager();
             ItemStack weapon = attacker.getInventory().getItemInMainHand();
