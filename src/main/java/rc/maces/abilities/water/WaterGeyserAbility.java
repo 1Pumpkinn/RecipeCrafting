@@ -17,7 +17,7 @@ import rc.maces.managers.TrustManager;
 
 import java.util.Collection;
 
-// UPDATED WaterGeyser Ability - Launches ALL nearby living entities upwards in 8 block range (except allies)
+// Water Geyser Ability - Launches ALL nearby living entities upwards in 8 block range (NO CHAT SPAM)
 public class WaterGeyserAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -34,6 +34,11 @@ public class WaterGeyserAbility extends BaseAbility {
         if (!canUse(player)) return;
 
         Location center = player.getLocation();
+
+        // SIMPLIFIED: Only one message at ability start
+        player.sendMessage(Component.text("🌊 WATER GEYSER! Launching enemies skyward!")
+                .color(NamedTextColor.BLUE));
+        center.getWorld().playSound(center, Sound.BLOCK_WATER_AMBIENT, 2.0f, 1.2f);
 
         // Create geyser effect
         new BukkitRunnable() {
@@ -53,25 +58,22 @@ public class WaterGeyserAbility extends BaseAbility {
                     effectLoc.getWorld().spawnParticle(Particle.BUBBLE, effectLoc, 8);
                 }
 
-                // UPDATED: Launch ALL living entities (players and mobs) every 5 ticks except allies in 8 block range
+                // Launch ALL living entities (players and mobs) every 5 ticks except allies in 8 block range
                 if (ticks % 5 == 0) {
                     Collection<Entity> nearby = center.getWorld().getNearbyEntities(center, 4, 4, 4); // 8 block range
                     for (Entity entity : nearby) {
                         if (entity instanceof LivingEntity && entity != player) {
                             LivingEntity target = (LivingEntity) entity;
 
-                            // Check trust system - don't launch trusted players
+                            // Check trust system - don't launch trusted players (NO SPAM MESSAGE)
                             if (target instanceof Player && trustManager.isTrusted(player, (Player) target)) {
                                 continue;
                             }
 
                             target.setVelocity(new Vector(0, 3.0, 0));
 
-                            // Send message only to players
-                            if (target instanceof Player) {
-                                ((Player) target).sendMessage(Component.text("🌊 Launched by Water Geyser!")
-                                        .color(NamedTextColor.BLUE));
-                            }
+                            // REMOVED: Individual launch messages to reduce spam
+                            // Players will feel the effect and see the visual animation
                         }
                     }
                 }
@@ -79,10 +81,6 @@ public class WaterGeyserAbility extends BaseAbility {
                 ticks++;
             }
         }.runTaskTimer(plugin, 0L, 1L);
-
-        player.sendMessage(Component.text("🌊 WATER GEYSER! Launching enemies skyward!")
-                .color(NamedTextColor.BLUE));
-        center.getWorld().playSound(center, Sound.BLOCK_WATER_AMBIENT, 2.0f, 1.2f);
 
         setCooldown(player);
     }

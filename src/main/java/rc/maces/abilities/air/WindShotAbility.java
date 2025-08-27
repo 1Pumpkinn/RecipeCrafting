@@ -1,14 +1,12 @@
 package rc.maces.abilities.air;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.WindCharge;
 import rc.maces.abilities.BaseAbility;
 import rc.maces.managers.CooldownManager;
 
-// WindShot Ability - Shoots 1 wind charge
+// WindShot Ability - Shoots 1 wind charge (NO CHAT SPAM)
 public class WindShotAbility extends BaseAbility {
 
     public WindShotAbility(CooldownManager cooldownManager) {
@@ -23,8 +21,7 @@ public class WindShotAbility extends BaseAbility {
         windCharge.setShooter(player);
         windCharge.setVelocity(player.getEyeLocation().getDirection().multiply(2));
 
-        player.sendMessage(Component.text("💨 Wind Shot launched!")
-                .color(NamedTextColor.WHITE));
+        // REMOVED: Chat message spam - just sound effect
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_BREEZE_SHOOT, 1.0f, 1.0f);
 
         setCooldown(player);

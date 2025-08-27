@@ -15,6 +15,7 @@ import rc.maces.managers.CooldownManager;
 
 import java.util.Collection;
 
+// Water Heal Ability - OPTIONAL: Can remove message entirely if desired
 public class WaterHealAbility extends BaseAbility {
 
     public WaterHealAbility(CooldownManager cooldownManager) {
@@ -29,8 +30,11 @@ public class WaterHealAbility extends BaseAbility {
         double newHealth = Math.min(player.getHealth() + 4.0, player.getMaxHealth());
         player.setHealth(newHealth);
 
-        player.sendMessage(Component.text("🌊 Water Heal! Restored 2 hearts!")
+        // SIMPLIFIED: Keep this message as it's useful feedback for self-healing
+        // Comment out the line below if you want NO chat messages at all
+        player.sendMessage(Component.text("🌊 Healed 2 hearts!")
                 .color(NamedTextColor.BLUE));
+
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
         player.getWorld().spawnParticle(Particle.HEART, player.getLocation().add(0, 1, 0), 5);
 

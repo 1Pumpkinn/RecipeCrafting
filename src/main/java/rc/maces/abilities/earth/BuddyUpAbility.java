@@ -14,7 +14,7 @@ import rc.maces.managers.TrustManager;
 
 import java.util.*;
 
-// FIXED BuddyUp Ability - Golem is now permanently friendly to summoner and never attacks them
+// UPDATED BuddyUp Ability - Golem is now permanently friendly to summoner and never attacks them (NO CHAT SPAM)
 public class BuddyUpAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -57,7 +57,7 @@ public class BuddyUpAbility extends BaseAbility {
         golem.setCustomName("§a" + player.getName() + "'s Buddy");
         golem.setCustomNameVisible(true);
 
-        // FIXED: Make the golem never naturally aggressive and always friendly to summoner
+        // Make the golem never naturally aggressive and always friendly to summoner
         golem.setTarget(null);
         golem.setAggressive(false);
 
@@ -66,11 +66,10 @@ public class BuddyUpAbility extends BaseAbility {
         playerGolems.put(player.getUniqueId(), golemInfo);
         golemUUIDs.add(golem.getUniqueId());
 
-        player.sendMessage(Component.text("🤖 BUDDY UP! Your iron golem protector has arrived!")
-                .color(NamedTextColor.GREEN));
+        // REMOVED: Chat message spam - just sound effect
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_IRON_GOLEM_HURT, 1.5f, 0.8f);
 
-        // ADDED: Continuous task to ensure golem never targets its summoner
+        // Continuous task to ensure golem never targets its summoner
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -123,7 +122,7 @@ public class BuddyUpAbility extends BaseAbility {
         if (event.getDamager() instanceof LivingEntity) {
             LivingEntity attacker = (LivingEntity) event.getDamager();
 
-            // FIXED: Always prevent golem from attacking its own summoner
+            // Always prevent golem from attacking its own summoner
             if (attacker.getUniqueId().equals(victim.getUniqueId())) {
                 return;
             }
@@ -148,7 +147,7 @@ public class BuddyUpAbility extends BaseAbility {
         }
     }
 
-    // FIXED: Handle when a golem gets damaged - completely prevent retaliation against summoner
+    // Handle when a golem gets damaged - completely prevent retaliation against summoner
     public static void handleGolemDamage(EntityDamageByEntityEvent event, IronGolem golem, TrustManager trustManager) {
         if (!golemUUIDs.contains(golem.getUniqueId())) {
             return; // Not one of our custom golems
@@ -167,14 +166,11 @@ public class BuddyUpAbility extends BaseAbility {
             return;
         }
 
-        // FIXED: If the summoner is attacking their own golem, NEVER let the golem retaliate
+        // If the summoner is attacking their own golem, NEVER let the golem retaliate
         if (event.getDamager().getUniqueId().equals(summoner.getUniqueId())) {
             // Immediately clear any target and make golem passive towards summoner
             golem.setTarget(null);
             golem.setAggressive(false);
-
-            // ADDED: Cancel the damage event if summoner is hitting their own golem to prevent retaliation mechanics
-            // Note: This doesn't prevent the damage, just ensures no retaliation
             return;
         } else if (event.getDamager() instanceof LivingEntity) {
             LivingEntity attacker = (LivingEntity) event.getDamager();
@@ -210,8 +206,8 @@ public class BuddyUpAbility extends BaseAbility {
             LivingEntity target = (LivingEntity) event.getEntity();
             IronGolem golem = golemInfo.golem;
 
-            // Check if golem is within 8 blocks of the summoner
-            if (golem.getLocation().distance(summoner.getLocation()) > 8.0) {
+            // Check if golem is within 15 blocks of the summoner
+            if (golem.getLocation().distance(summoner.getLocation()) > 15.0) {
                 return; // Golem is too far away to help
             }
 
@@ -225,7 +221,7 @@ public class BuddyUpAbility extends BaseAbility {
                 return;
             }
 
-            // FIXED: Double-check that the target is not the summoner themselves (edge case protection)
+            // Double-check that the target is not the summoner themselves (edge case protection)
             if (target.getUniqueId().equals(summoner.getUniqueId())) {
                 return;
             }

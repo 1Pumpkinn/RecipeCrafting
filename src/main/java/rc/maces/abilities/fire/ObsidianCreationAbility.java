@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+// Obsidian Creation Ability - REDUCED CHAT SPAM
 public class ObsidianCreationAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -39,23 +40,23 @@ public class ObsidianCreationAbility extends BaseAbility {
         Map<Location, Material> originalBlocks = new HashMap<>();
         int waterConverted = 0;
 
-        // UPDATED: Find all entities in 8 block radius and spawn obsidian on them (except allies)
+        // Find all entities in 8 block radius and spawn obsidian on them (except allies)
         Collection<Entity> nearbyEntities = center.getWorld().getNearbyEntities(center, 4, 4, 4); // 8 block range
         for (Entity entity : nearbyEntities) {
             if (entity instanceof LivingEntity && entity != player) {
                 LivingEntity target = (LivingEntity) entity;
 
-                // Check trust system - don't trap trusted players
+                // Check trust system - don't trap trusted players (NO SPAM MESSAGE)
                 if (target instanceof Player && trustManager.isTrusted(player, (Player) target)) {
                     continue;
                 }
 
                 Location targetLoc = target.getLocation();
 
-                // UPDATED: Spawn obsidian in a larger box (3x4x3 instead of 3x3x3)
+                // Spawn obsidian in a larger box (3x4x3 instead of 3x3x3)
                 for (int x = -1; x <= 1; x++) {
                     for (int z = -1; z <= 1; z++) {
-                        for (int y = 0; y <= 3; y++) { // INCREASED from 2 to 3 for height
+                        for (int y = 0; y <= 3; y++) { // Height of 4 blocks
                             Location obsidianLoc = targetLoc.clone().add(x, y, z);
                             Material blockType = obsidianLoc.getBlock().getType();
 
@@ -82,6 +83,7 @@ public class ObsidianCreationAbility extends BaseAbility {
             return; // Don't set cooldown if no obsidian was created
         }
 
+        // SIMPLIFIED: Only one message at ability start
         player.sendMessage(Component.text("🖤 OBSIDIAN CREATION! Converted " + waterConverted + " water blocks to obsidian!")
                 .color(NamedTextColor.DARK_PURPLE));
         center.getWorld().playSound(center, Sound.BLOCK_LAVA_POP, 2.0f, 0.4f);
@@ -101,13 +103,13 @@ public class ObsidianCreationAbility extends BaseAbility {
 
                 // Deal damage to entities standing on obsidian blocks (that were water) every 1.5 seconds
                 if (ticks % 30 == 0) {
-                    // UPDATED: Check in 8 block radius (same as initial range)
+                    // Check in 8 block radius (same as initial range)
                     Collection<Entity> nearby = center.getWorld().getNearbyEntities(center, 4, 4, 4);
                     for (Entity entity : nearby) {
                         if (entity instanceof LivingEntity && entity != player) {
                             LivingEntity target = (LivingEntity) entity;
 
-                            // Check trust system - don't damage trusted players
+                            // Check trust system - don't damage trusted players (NO SPAM MESSAGE)
                             if (target instanceof Player && trustManager.isTrusted(player, (Player) target)) {
                                 continue;
                             }
@@ -146,10 +148,8 @@ public class ObsidianCreationAbility extends BaseAbility {
                                 targetLoc.getWorld().playSound(targetLoc, Sound.BLOCK_LAVA_POP, 1.5f, 1.2f);
                                 targetLoc.getWorld().playSound(targetLoc, Sound.ENTITY_GENERIC_BURN, 1.0f, 1.0f);
 
-                                if (target instanceof Player) {
-                                    ((Player) target).sendMessage(Component.text("🖤🔥 Burning on converted obsidian! Taking damage and ignited!")
-                                            .color(NamedTextColor.DARK_PURPLE));
-                                }
+                                // REMOVED: Individual damage messages to reduce spam
+                                // Players will see the visual/audio effects and feel the damage
                             }
                         }
                     }

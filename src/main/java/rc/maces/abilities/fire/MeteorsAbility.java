@@ -21,7 +21,7 @@ import rc.maces.managers.TrustManager;
 import java.util.Collection;
 import java.util.Random;
 
-// Meteors Ability - variable damage depending on armor worn
+// Meteors Ability - variable damage depending on armor worn (REDUCED CHAT SPAM)
 public class MeteorsAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -40,6 +40,7 @@ public class MeteorsAbility extends BaseAbility {
 
         Location center = player.getLocation();
 
+        // SIMPLIFIED: Only one message at ability start
         player.sendMessage(Component.text("☄️ METEORS! Raining destruction!")
                 .color(NamedTextColor.RED));
         center.getWorld().playSound(center, Sound.ENTITY_WITHER_SPAWN, 3.0f, 0.4f);
@@ -49,7 +50,7 @@ public class MeteorsAbility extends BaseAbility {
 
             @Override
             public void run() {
-                if (meteorsLaunched >= 6) { // Increased from 4 to 6 meteors for better coverage
+                if (meteorsLaunched >= 6) {
                     cancel();
                     return;
                 }
@@ -99,16 +100,16 @@ public class MeteorsAbility extends BaseAbility {
 
         // Deal variable damage to ALL nearby living entities in 5 block range (10 block diameter)
         Collection<Entity> nearby = targetLoc.getWorld().getNearbyEntities(targetLoc, 5, 5, 5);
+        int affectedCount = 0; // Track affected entities for summary message
+
         for (Entity entity : nearby) {
             if (entity instanceof LivingEntity && entity != caster) {
                 LivingEntity living = (LivingEntity) entity;
 
-                // TRUST SYSTEM CHECK - Skip trusted players
+                // TRUST SYSTEM CHECK - Skip trusted players (NO SPAM MESSAGE)
                 if (living instanceof Player targetPlayer) {
                     if (trustManager.isTrusted(caster, targetPlayer)) {
-                        // Send message to trusted player that they were protected
-                        targetPlayer.sendMessage(Component.text("🛡️ Protected from " + caster.getName() + "'s meteors by alliance!")
-                                .color(NamedTextColor.GREEN));
+                        // REMOVED: No spam message to trusted players
                         continue;
                     }
 
@@ -137,14 +138,9 @@ public class MeteorsAbility extends BaseAbility {
                     entity.setVelocity(knockback);
                 }
 
-                // Send damage message to players
-                if (living instanceof Player targetPlayer) {
-                    targetPlayer.sendMessage(Component.text("☄️ Hit by meteor! Took " + String.format("%.1f", damage) + " damage!")
-                            .color(NamedTextColor.RED));
-                }
+                affectedCount++; // Count this entity as affected
             }
-        }
-    }
+        }}
 
     private double calculateDamage(LivingEntity living) {
         // Default damage for mobs
