@@ -2,6 +2,7 @@ package rc.maces;
 
 import org.bukkit.plugin.java.JavaPlugin;
 import rc.maces.commands.*;
+import rc.maces.commands.ScanMacesCommand;
 import rc.maces.listeners.*;
 import rc.maces.managers.*;
 import rc.maces.recipes.RecipeManager;
@@ -53,6 +54,7 @@ public class Main extends JavaPlugin {
 
         // Register reset command
         getCommand("resetmaces").setExecutor(new ResetMaceCommand(elementManager, maceManager, craftingListener));
+        getCommand("scanmaces").setExecutor(new ScanMacesCommand(craftingListener));
 
         // Register trust commands
         getCommand("trust").setExecutor(new TrustCommand(trustManager));
@@ -134,6 +136,9 @@ public class Main extends JavaPlugin {
             trustManager.saveAllData();
         }
 
+        if (craftingListener != null) {
+            craftingListener.onDisable();
+        }
         getLogger().info("Maces plugin disabled!");
     }
 

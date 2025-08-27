@@ -2,6 +2,7 @@ package rc.maces.listeners;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -10,10 +11,13 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.ShapedRecipe;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 import rc.maces.managers.ElementManager;
 import rc.maces.recipes.CustomRecipe;
 import rc.maces.recipes.RecipeManager;
@@ -45,6 +49,22 @@ public class CraftingListener implements Listener {
         // Initialize persistent storage
         initializeMaceDataFile();
         loadMaceData();
+
+        // Scan all online players for existing maces
+        scanAllPlayersForMaces();
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+
+        // Scan this player's inventory for maces after a short delay to ensure they're fully loaded
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                scanPlayerForMaces(player);
+            }
+        }.runTaskLater(plugin, 20L); // 1 second delay
     }
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -128,6 +148,201 @@ public class CraftingListener implements Listener {
     }
 
     /**
+     * Scan all online players for existing maces
+     */
+    private void scanAllPlayersForMaces() {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    scanPlayerForMaces(player);
+                }
+                plugin.getLogger().info("Completed mace scanning for all online players.");
+            }
+        }.runTaskLater(plugin, 40L); // 2 second delay to let server fully load
+    }
+
+    /**
+     * Scan all players (both online and offline) for existing maces
+     */
+    public void scanAllPlayersIncludingOffline() {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                int onlineCount = 0;
+                int offlineCount = 0;
+
+                // Scan online players first
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    scanPlayerForMaces(player);
+                    onlineCount++;
+                }
+
+                // Scan offline players
+                for (org.bukkit.OfflinePlayer offlinePlayer : Bukkit.getOfflinePlayers()) {
+                    if (!offlinePlayer.isOnline() && offlinePlayer.hasPlayedBefore()) {
+                        scanOfflinePlayerForMaces(offlinePlayer);
+                        offlineCount++;
+                    }
+                }
+
+                plugin.getLogger().info("Completed mace scanning for " + onlineCount + " online players and " + offlineCount + " offline players.");
+            }
+        }.runTaskAsynchronously(plugin); // Run async since this could take a while
+    }
+
+    /**
+     * Scan an offline player's data for maces
+     */
+    private void scanOfflinePlayerForMaces(org.bukkit.OfflinePlayer offlinePlayer) {
+        try {
+            // Load the offline player's data
+            org.bukkit.entity.Player player = offlinePlayer.getPlayer();
+
+            // If the player object is null, we need to use the server's player data loading
+            if (player == null) {
+                // Get the player's data file path
+                String worldName = Bukkit.getWorlds().get(0).getName(); // Default world
+                File playerDataFolder = new File(Bukkit.getWorldContainer(), worldName + "/playerdata");
+                File playerDataFile = new File(playerDataFolder, offlinePlayer.getUniqueId().toString() + ".dat");
+
+                if (!playerDataFile.exists()) {
+                    return; // No player data file
+                }
+
+                // This is a simplified approach - you might need to use NBT libraries
+                // For now, we'll skip offline scanning and only do it when players are online
+                // since reading NBT data directly is complex without additional libraries
+                return;
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to scan offline player " + offlinePlayer.getName() + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Scan a specific player's inventory and ender chest for maces
+     */
+    private void scanPlayerForMaces(Player player) {
+        Map<String, Integer> foundMaces = new HashMap<>();
+
+        // Scan player's main inventory
+        for (ItemStack item : player.getInventory().getContents()) {
+            String maceType = identifyMaceType(item);
+            if (maceType != null) {
+                foundMaces.put(maceType, foundMaces.getOrDefault(maceType, 0) + item.getAmount());
+            }
+        }
+
+        // Scan player's ender chest
+        for (ItemStack item : player.getEnderChest().getContents()) {
+            String maceType = identifyMaceType(item);
+            if (maceType != null) {
+                foundMaces.put(maceType, foundMaces.getOrDefault(maceType, 0) + item.getAmount());
+            }
+        }
+
+        // Update the player's mace counts based on what we found
+        boolean updated = false;
+        UUID playerId = player.getUniqueId();
+
+        for (Map.Entry<String, Integer> entry : foundMaces.entrySet()) {
+            String maceType = entry.getKey();
+            int foundCount = Math.min(entry.getValue(), MAX_MACES_PER_TYPE); // Cap at max allowed
+            int currentCount = getPlayerMaceCount(playerId, maceType);
+
+            if (foundCount > currentCount) {
+                setPlayerMaceCount(playerId, maceType, foundCount);
+                updated = true;
+                plugin.getLogger().info("Updated " + player.getName() + "'s " + maceType.toLowerCase() +
+                        " mace count from " + currentCount + " to " + foundCount);
+            }
+        }
+
+        if (updated) {
+            saveMaceData();
+        }
+    }
+
+    /**
+     * Identify what type of mace an ItemStack is
+     * This method needs to be customized based on how your maces are identified
+     */
+    private String identifyMaceType(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) {
+            return null;
+        }
+
+        ItemMeta meta = item.getItemMeta();
+
+        // Check display name first
+        if (meta.hasDisplayName()) {
+            String displayName = meta.getDisplayName().toLowerCase();
+            if (displayName.contains("air mace")) return "AIR";
+            if (displayName.contains("fire mace")) return "FIRE";
+            if (displayName.contains("water mace")) return "WATER";
+            if (displayName.contains("earth mace")) return "EARTH";
+        }
+
+        // Check lore if display name doesn't match
+        if (meta.hasLore()) {
+            for (String lore : meta.getLore()) {
+                String loreLower = lore.toLowerCase();
+                if (loreLower.contains("air mace")) return "AIR";
+                if (loreLower.contains("fire mace")) return "FIRE";
+                if (loreLower.contains("water mace")) return "WATER";
+                if (loreLower.contains("earth mace")) return "EARTH";
+
+                // Alternative: check for elemental keywords
+                if (loreLower.contains("elemental") && loreLower.contains("air")) return "AIR";
+                if (loreLower.contains("elemental") && loreLower.contains("fire")) return "FIRE";
+                if (loreLower.contains("elemental") && loreLower.contains("water")) return "WATER";
+                if (loreLower.contains("elemental") && loreLower.contains("earth")) return "EARTH";
+            }
+        }
+
+        // Check custom model data or persistent data container if you use those
+        // Example:
+        // if (meta.hasCustomModelData()) {
+        //     int modelData = meta.getCustomModelData();
+        //     switch (modelData) {
+        //         case 1001: return "AIR";
+        //         case 1002: return "FIRE";
+        //         case 1003: return "WATER";
+        //         case 1004: return "EARTH";
+        //     }
+        // }
+
+        return null;
+    }
+
+    /**
+     * Command to manually scan all online players (for admin use)
+     */
+    public void scanAllPlayersCommand() {
+        scanAllPlayersForMaces();
+    }
+
+    /**
+     * Command to manually scan all players including offline ones (for admin use)
+     */
+    public void scanAllPlayersIncludingOfflineCommand() {
+        scanAllPlayersIncludingOffline();
+    }
+
+    /**
+     * Scan a player when they come online (deferred scanning)
+     */
+    public void scanPlayerDeferred(Player player) {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                scanPlayerForMaces(player);
+            }
+        }.runTaskLater(plugin, 20L); // 1 second delay
+    }
+
+    /**
      * Extract mace type from recipe key
      */
     private String getMaceTypeFromRecipeKey(String recipeKey) {
@@ -180,7 +395,7 @@ public class CraftingListener implements Listener {
     /**
      * Save mace data to file
      */
-    private void saveMaceData() {
+    public void saveMaceData() {
         // Clear existing data
         maceDataConfig.set("players", null);
 
@@ -200,12 +415,35 @@ public class CraftingListener implements Listener {
     }
 
     /**
+     * Called when the plugin is being disabled - saves all data
+     */
+    public void onDisable() {
+        saveMaceData();
+        plugin.getLogger().info("Mace data saved successfully on plugin shutdown.");
+    }
+
+    /**
      * Get the current count of a specific mace type for a player
      */
     private int getPlayerMaceCount(UUID playerId, String maceType) {
         return playerMaceCounts
                 .computeIfAbsent(playerId, k -> new HashMap<>())
                 .getOrDefault(maceType, 0);
+    }
+
+    /**
+     * Set the count of a specific mace type for a player
+     */
+    private void setPlayerMaceCount(UUID playerId, String maceType, int count) {
+        Map<String, Integer> playerCounts = playerMaceCounts.computeIfAbsent(playerId, k -> new HashMap<>());
+        if (count <= 0) {
+            playerCounts.remove(maceType);
+            if (playerCounts.isEmpty()) {
+                playerMaceCounts.remove(playerId);
+            }
+        } else {
+            playerCounts.put(maceType, count);
+        }
     }
 
     /**

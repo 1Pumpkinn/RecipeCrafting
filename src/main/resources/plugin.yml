@@ -125,6 +125,11 @@ commands:
     permission-message: "&cYou must be an operator to reload the plugin!"
     aliases: [rcreload, reloadmaces]
 
+  scanmaces:
+    description: Scan all players for existing maces
+    usage: /<command>
+    permission: maces.admin.scan
+
   macehelp:
     description: Show help information for mace commands
     usage: /<command> [topic]
