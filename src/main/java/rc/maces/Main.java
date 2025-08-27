@@ -18,6 +18,7 @@ public class Main extends JavaPlugin {
     private CraftingListener craftingListener;
     private CraftingRestrictionListener craftingRestrictionListener;
     private HeavyCoreMonitor heavyCoreMonitor;
+    private MovementPreventionListener movementPreventionListener; // ADDED
 
     @Override
     public void onEnable() {
@@ -34,6 +35,9 @@ public class Main extends JavaPlugin {
         // Initialize security listeners
         craftingRestrictionListener = new CraftingRestrictionListener(maceManager, this);
         heavyCoreMonitor = new HeavyCoreMonitor(this);
+
+        // ADDED: Initialize movement prevention listener
+        movementPreventionListener = new MovementPreventionListener();
 
         // Register mace commands
         getCommand("airmace").setExecutor(new AirmaceCommand(maceManager));
@@ -75,6 +79,10 @@ public class Main extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 heavyCoreMonitor, this);
 
+        // ADDED: Register movement prevention listener (CRITICAL for Vine Trap)
+        getServer().getPluginManager().registerEvents(
+                movementPreventionListener, this);
+
         // Register recipes
         recipeManager.registerAllRecipes();
 
@@ -102,6 +110,7 @@ public class Main extends JavaPlugin {
         getLogger().info("- Chat spam prevention active");
         getLogger().info("- Mace crafting reset system enabled");
         getLogger().info("- Advanced mace security system active");
+        getLogger().info("- Movement prevention system active"); // ADDED
     }
 
     @Override
@@ -154,5 +163,9 @@ public class Main extends JavaPlugin {
 
     public HeavyCoreMonitor getHeavyCoreMonitor() {
         return heavyCoreMonitor;
+    }
+
+    public MovementPreventionListener getMovementPreventionListener() {
+        return movementPreventionListener;
     }
 }
