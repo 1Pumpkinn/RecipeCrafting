@@ -18,7 +18,7 @@ public class Main extends JavaPlugin {
     private CraftingListener craftingListener;
     private CraftingRestrictionListener craftingRestrictionListener;
     private HeavyCoreMonitor heavyCoreMonitor;
-    private MovementPreventionListener movementPreventionListener; // ADDED
+    private MovementPreventionListener movementPreventionListener;
 
     @Override
     public void onEnable() {
@@ -36,7 +36,7 @@ public class Main extends JavaPlugin {
         craftingRestrictionListener = new CraftingRestrictionListener(maceManager, this);
         heavyCoreMonitor = new HeavyCoreMonitor(this);
 
-        // ADDED: Initialize movement prevention listener
+        // Initialize movement prevention listener
         movementPreventionListener = new MovementPreventionListener();
 
         // Register mace commands
@@ -61,6 +61,9 @@ public class Main extends JavaPlugin {
         getCommand("trustaccept").setExecutor(new TrustAcceptCommand(trustManager));
         getCommand("trustdeny").setExecutor(new TrustDenyCommand(trustManager));
 
+        // Register trust debug command (admin only)
+        getCommand("trustdebug").setExecutor(new TrustDebugCommand(trustManager));
+
         // Register security command
         getCommand("macesecurity").setExecutor(new MaceSecurityCommand(craftingRestrictionListener, heavyCoreMonitor));
 
@@ -79,7 +82,7 @@ public class Main extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 heavyCoreMonitor, this);
 
-        // ADDED: Register movement prevention listener (CRITICAL for Vine Trap)
+        // Register movement prevention listener (CRITICAL for Vine Trap)
         getServer().getPluginManager().registerEvents(
                 movementPreventionListener, this);
 
@@ -92,6 +95,11 @@ public class Main extends JavaPlugin {
         // Create and store PassiveEffectsListener reference
         passiveEffectsListener = new PassiveEffectsListener(maceManager, elementManager, trustManager);
         passiveEffectsListener.runTaskTimer(this, 0L, 20L); // Every second
+
+        // Clean up any orphaned trust relationships on startup
+        getServer().getScheduler().runTaskLater(this, () -> {
+            trustManager.cleanupOrphanedTrusts();
+        }, 20L); // Run after 1 second delay
 
         // Plugin startup messages
         getLogger().info("Maces plugin enabled!");
@@ -110,7 +118,8 @@ public class Main extends JavaPlugin {
         getLogger().info("- Chat spam prevention active");
         getLogger().info("- Mace crafting reset system enabled");
         getLogger().info("- Advanced mace security system active");
-        getLogger().info("- Movement prevention system active"); // ADDED
+        getLogger().info("- Movement prevention system active");
+        getLogger().info("- Trust system debug tools available (/trustdebug)");
     }
 
     @Override

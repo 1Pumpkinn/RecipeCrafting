@@ -101,6 +101,14 @@ commands:
     permission-message: "&cYou don't have permission to use the trust system!"
     aliases: [denytrust, rejecttrust, trustno]
 
+  # Trust debug command (admin only)
+  trustdebug:
+    description: Debug and test trust system functionality
+    usage: /<command> <status|check|test> [args...]
+    permission: element.admin
+    permission-message: "&cYou don't have permission to use trust debug commands!"
+    aliases: [tdebug, trustcheck]
+
   # Security command
   macesecurity:
     description: Monitor and manage mace security systems
@@ -137,6 +145,7 @@ permissions:
       earthmace.give: true
       maces.reset.others: true
       maces.security: true
+      maces.trust.debug: true
 
   element.reroll.others:
     description: Allows rerolling other players' elements
@@ -149,6 +158,11 @@ permissions:
   # Security permissions
   maces.security:
     description: Allows using mace security monitoring commands
+    default: op
+
+  # Trust debug permission
+  maces.trust.debug:
+    description: Allows using trust debug commands
     default: op
 
   # Mace giving permissions
@@ -224,3 +238,4 @@ permissions:
       maces.player: true
       maces.reset.others: true
       maces.security: true
+      maces.trust.debug: true
