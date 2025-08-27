@@ -78,9 +78,13 @@ public class PassiveEffectsListener extends BukkitRunnable {
             // Conduit power
             player.addPotionEffect(new PotionEffect(PotionEffectType.CONDUIT_POWER, 40, 0, false, false));
 
-            // Dolphins Grace level 1 (reduced from level 4)
+            // UPDATED: Dolphins Grace level 3 when holding mace, level 1 when just has water element
             if (player.isInWater()) {
-                player.addPotionEffect(new PotionEffect(PotionEffectType.DOLPHINS_GRACE, 40, 0, false, false));
+                if (holdingMace) {
+                    player.addPotionEffect(new PotionEffect(PotionEffectType.DOLPHINS_GRACE, 40, 2, false, false)); // Level 3
+                } else {
+                    player.addPotionEffect(new PotionEffect(PotionEffectType.DOLPHINS_GRACE, 40, 0, false, false)); // Level 1
+                }
             }
         }
     }

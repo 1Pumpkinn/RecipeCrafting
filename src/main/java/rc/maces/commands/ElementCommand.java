@@ -231,7 +231,7 @@ public class ElementCommand implements CommandExecutor {
                         .decoration(TextDecoration.BOLD, true));
                 player.sendMessage(Component.text("• Dolphins Grace I in water - Swim faster")
                         .color(NamedTextColor.BLUE));
-                player.sendMessage(Component.text("• Conduit Power - See underwater, breathe")
+                player.sendMessage(Component.text("• Conduit Power - See underwater, water breathing")
                         .color(NamedTextColor.BLUE));
 
                 player.sendMessage(Component.empty());

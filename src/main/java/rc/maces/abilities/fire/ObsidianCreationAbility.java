@@ -20,7 +20,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-// Obsidian Creation Ability - UPDATED: Larger box, no water conversion text, priority obsidian placement
+// Obsidian Creation Ability - UPDATED: Only replaces tall grass and short grass
 public class ObsidianCreationAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -53,28 +53,29 @@ public class ObsidianCreationAbility extends BaseAbility {
 
                 Location targetLoc = target.getLocation();
 
-                // Spawn obsidian in a larger box (4x5x4 instead of 3x4x3)
+                // Spawn obsidian in a larger box (4x5x4) but ONLY replace grass types
                 for (int x = -2; x <= 1; x++) { // 4 blocks wide
                     for (int z = -2; z <= 1; z++) { // 4 blocks deep
                         for (int y = 0; y <= 4; y++) { // Height of 5 blocks
                             Location obsidianLoc = targetLoc.clone().add(x, y, z);
                             Material blockType = obsidianLoc.getBlock().getType();
 
-                            // Can't break bedrock or reinforced deepslate
-                            if (blockType == Material.BEDROCK || blockType == Material.REINFORCED_DEEPSLATE) {
-                                continue;
-                            }
+                            // UPDATED: Only replace tall grass and short grass (and air for completion)
+                            if (blockType == Material.TALL_GRASS ||
+                                    blockType == Material.SHORT_GRASS ||
+                                    blockType == Material.AIR) {
 
-                            // Replace ALL blocks except bedrock and reinforced deepslate
-                            if (blockType != Material.OBSIDIAN) { // Don't replace existing obsidian
-                                originalBlocks.put(obsidianLoc.clone(), blockType);
-                                obsidianLoc.getBlock().setType(Material.OBSIDIAN);
-                                blocksConverted++;
+                                // Don't replace existing obsidian
+                                if (blockType != Material.OBSIDIAN) {
+                                    originalBlocks.put(obsidianLoc.clone(), blockType);
+                                    obsidianLoc.getBlock().setType(Material.OBSIDIAN);
+                                    blocksConverted++;
 
-                                // Enhanced visual effects at obsidian creation sites
-                                obsidianLoc.getWorld().spawnParticle(Particle.SMOKE, obsidianLoc.add(0.5, 0.5, 0.5), 15);
-                                obsidianLoc.getWorld().spawnParticle(Particle.LAVA, obsidianLoc, 8);
-                                obsidianLoc.getWorld().spawnParticle(Particle.FLAME, obsidianLoc, 12);
+                                    // Enhanced visual effects at obsidian creation sites
+                                    obsidianLoc.getWorld().spawnParticle(Particle.SMOKE, obsidianLoc.add(0.5, 0.5, 0.5), 15);
+                                    obsidianLoc.getWorld().spawnParticle(Particle.LAVA, obsidianLoc, 8);
+                                    obsidianLoc.getWorld().spawnParticle(Particle.FLAME, obsidianLoc, 12);
+                                }
                             }
                         }
                     }
@@ -97,8 +98,7 @@ public class ObsidianCreationAbility extends BaseAbility {
 
             @Override
             public void run() {
-                if (ticks >= 300) { // 15 seconds (increased duration)
-                    // Obsidian is now permanent - no restoration
+                if (ticks >= 300) { // 15 seconds of damage dealing
                     cancel();
                     return;
                 }
@@ -149,9 +149,6 @@ public class ObsidianCreationAbility extends BaseAbility {
                                 targetLoc.getWorld().spawnParticle(Particle.FLAME, targetLoc, 25);
                                 targetLoc.getWorld().playSound(targetLoc, Sound.BLOCK_LAVA_POP, 1.5f, 1.2f);
                                 targetLoc.getWorld().playSound(targetLoc, Sound.ENTITY_GENERIC_BURN, 1.0f, 1.0f);
-
-                                // REMOVED: Individual damage messages to reduce spam
-                                // Players will see the visual/audio effects and feel the damage
                             }
                         }
                     }
@@ -160,6 +157,20 @@ public class ObsidianCreationAbility extends BaseAbility {
                 ticks++;
             }
         }.runTaskTimer(plugin, 0L, 1L);
+
+        // Schedule obsidian removal after 1 minutes (1200 ticks)
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                // Remove all obsidian blocks that were converted
+                for (Location obsidianLoc : originalBlocks.keySet()) {
+                    if (obsidianLoc.getBlock().getType() == Material.OBSIDIAN) {
+                        Material originalType = originalBlocks.get(obsidianLoc);
+                        obsidianLoc.getBlock().setType(originalType);
+                    }
+                }
+            }
+        }.runTaskLater(plugin, 1200L); // 1 minutes = 1200 ticks
 
         setCooldown(player);
     }

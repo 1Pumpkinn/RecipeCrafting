@@ -10,7 +10,6 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LargeFireball;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
@@ -21,7 +20,7 @@ import rc.maces.managers.TrustManager;
 import java.util.Collection;
 import java.util.Random;
 
-// Meteors Ability - variable damage depending on armor worn (REDUCED CHAT SPAM)
+// Meteors Ability - NERFED: Now does exactly 1 heart (2 damage) per meteor hit regardless of armor
 public class MeteorsAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -98,7 +97,7 @@ public class MeteorsAbility extends BaseAbility {
         targetLoc.getWorld().spawnParticle(Particle.LAVA, targetLoc, 15);
         targetLoc.getWorld().spawnParticle(Particle.SMOKE, targetLoc, 25);
 
-        // Deal variable damage to ALL nearby living entities in 5 block range (10 block diameter)
+        // Deal flat 1 heart (2 damage) to ALL nearby living entities in 5 block range
         Collection<Entity> nearby = targetLoc.getWorld().getNearbyEntities(targetLoc, 5, 5, 5);
         int affectedCount = 0; // Track affected entities for summary message
 
@@ -119,8 +118,8 @@ public class MeteorsAbility extends BaseAbility {
                     }
                 }
 
-                // BALANCED DAMAGE SYSTEM - Won't one-shot full iron
-                double damage = calculateDamage(living);
+                // SIMPLIFIED DAMAGE SYSTEM - Always 1 heart (2 damage) regardless of armor
+                double damage = 2.0; // Exactly 1 heart
 
                 // Apply damage safely (never kill instantly, always leave at least 1 HP)
                 double currentHealth = living.getHealth();
@@ -139,68 +138,7 @@ public class MeteorsAbility extends BaseAbility {
                 }
 
                 affectedCount++; // Count this entity as affected
-
-                // REMOVED: Individual damage messages to reduce spam
             }
         }
-    }
-
-    private double calculateDamage(LivingEntity living) {
-        // Default damage for mobs
-        double damage = 6.0; // 3 hearts
-
-        if (living instanceof Player targetPlayer) {
-            ItemStack[] armor = targetPlayer.getInventory().getArmorContents();
-
-            int armorPieces = 0;
-            boolean hasIron = false;
-            boolean hasDiamond = false;
-            boolean hasNetherite = false;
-
-            // Count armor pieces and check materials
-            for (ItemStack piece : armor) {
-                if (piece != null && !piece.getType().isAir()) {
-                    armorPieces++;
-                    String material = piece.getType().name();
-
-                    if (material.contains("IRON")) {
-                        hasIron = true;
-                    } else if (material.contains("DIAMOND")) {
-                        hasDiamond = true;
-                    } else if (material.contains("NETHERITE")) {
-                        hasNetherite = true;
-                    }
-                }
-            }
-
-            // Damage calculation based on armor
-            if (armorPieces == 0) {
-                damage = 12.0; // 6 hearts (no armor)
-            } else if (armorPieces == 4) {
-                // Full armor set
-                if (hasNetherite) {
-                    damage = 4.0; // 2 hearts (netherite is strongest)
-                } else if (hasDiamond) {
-                    damage = 5.0; // 2.5 hearts (diamond)
-                } else if (hasIron) {
-                    damage = 7.0; // 3.5 hearts (iron - won't one-shot from full health)
-                } else {
-                    damage = 8.0; // 4 hearts (leather/chainmail/mixed)
-                }
-            } else {
-                // Partial armor - scale damage based on pieces
-                double baseReduction = 0.15 * armorPieces; // 15% reduction per piece
-                if (hasNetherite || hasDiamond) {
-                    baseReduction += 0.1; // Bonus reduction for high-tier armor
-                } else if (hasIron) {
-                    baseReduction += 0.05; // Small bonus for iron
-                }
-
-                damage = 12.0 * (1.0 - baseReduction);
-                damage = Math.max(4.0, damage); // Minimum 2 hearts with any armor
-            }
-        }
-
-        return damage;
     }
 }

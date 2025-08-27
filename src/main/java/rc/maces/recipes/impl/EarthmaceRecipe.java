@@ -32,11 +32,13 @@ public class EarthmaceRecipe implements CustomRecipe {
         ItemStack result = maceManager.createEarthMace();
 
         ShapedRecipe recipe = new ShapedRecipe(recipeKey, result);
-        recipe.shape("SGS", "GHG", "SBS");
+        recipe.shape("MSM", "PHP", "DBD");
+        recipe.setIngredient('M', Material.MOSS_BLOCK);
         recipe.setIngredient('S', Material.SCULK_CATALYST);
-        recipe.setIngredient('G', Material.GRASS_BLOCK);
+        recipe.setIngredient('P', Material.PINK_WOOL);
         recipe.setIngredient('H', Material.HEAVY_CORE);
         recipe.setIngredient('B', Material.BREEZE_ROD);
+        recipe.setIngredient('D', Material.DEEPSLATE_EMERALD_ORE);
 
         return recipe;
     }

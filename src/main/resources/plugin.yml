@@ -6,47 +6,57 @@ description: Elemental maces
 author: ___Pumpkinn
 depend: []
 load: STARTUP
+website: https://ko-fi.com/1pumpkinn
+
 
 commands:
-  # Mace giving commands
+  # Mace giving commands (OP ONLY)
   airmace:
     description: Give an air mace to a player
     usage: /<command> <player>
-    default: op
-    permission-message: "&cYou don't have permission to give air maces!"
+    permission: maces.admin
+    permission-message: "&cYou must be an operator to give air maces!"
 
   firemace:
     description: Give a fire mace to a player
     usage: /<command> <player>
-    default: op
-    permission-message: "&cYou don't have permission to give fire maces!"
+    permission: maces.admin
+    permission-message: "&cYou must be an operator to give fire maces!"
 
   watermace:
     description: Give a water mace to a player
     usage: /<command> <player>
-    default: op
-    permission-message: "&cYou don't have permission to give water maces!"
+    permission: maces.admin
+    permission-message: "&cYou must be an operator to give water maces!"
 
   earthmace:
     description: Give an earth mace to a player
     usage: /<command> <player>
-    default: op
-    permission-message: "&cYou don't have permission to give earth maces!"
+    permission: maces.admin
+    permission-message: "&cYou must be an operator to give earth maces!"
 
-  # Element management commands
+  # Element management commands (OP ONLY)
   element:
     description: Admin command to manage player elements or view element info
     usage: /<command> <check|set|info|list> [player] [element]
-    default: op
-    permission-message: "&cYou don't have permission to use element commands!"
+    permission: maces.admin
+    permission-message: "&cYou must be an operator to use element commands!"
     aliases: [el, elem]
 
   reroll:
     description: Reroll your element or another player's element
     usage: /<command> [player]
-    default: op
-    permission-message: "&cYou don't have permission to reroll elements!"
+    permission: maces.admin
+    permission-message: "&cYou must be an operator to reroll elements!"
     aliases: [elementreroll, rerollelement]
+
+  # Reset mace crafting limits (OP ONLY)
+  resetmaces:
+    description: Reset mace crafting limits for yourself or another player
+    usage: /<command> [player] [mace_type]
+    permission: maces.admin
+    permission-message: "&cYou must be an operator to reset mace crafting limits!"
+    aliases: [resetmace, macereset, clearmaces]
 
   myelement:
     description: Check your current element and abilities
@@ -57,14 +67,6 @@ commands:
     description: Check your crafted maces inventory
     usage: /<command>
     aliases: [maces, maceinv, maceinventory]
-
-  # Reset mace crafting limits
-  resetmaces:
-    description: Reset mace crafting limits for yourself or another player
-    usage: /<command> [player] [mace_type]
-    permission: maces.reset
-    permission-message: "&cYou don't have permission to reset mace crafting limits!"
-    aliases: [resetmace, macereset, clearmaces]
 
   # Trust system commands
   trust:
@@ -105,24 +107,24 @@ commands:
   trustdebug:
     description: Debug and test trust system functionality
     usage: /<command> <status|check|test> [args...]
-    permission: element.admin
-    permission-message: "&cYou don't have permission to use trust debug commands!"
+    permission: maces.admin
+    permission-message: "&cYou must be an operator to use trust debug commands!"
     aliases: [tdebug, trustcheck]
 
   # Security command
   macesecurity:
     description: Monitor and manage mace security systems
     usage: /<command> [status|scan|help]
-    permission: element.admin
-    permission-message: "&cYou don't have permission to use security commands!"
+    permission: maces.admin
+    permission-message: "&cYou must be an operator to use security commands!"
     aliases: [msecurity, macesec, securitycheck]
 
   # Utility commands
   macereload:
     description: Reload plugin configuration
     usage: /<command>
-    permission: element.admin
-    permission-message: "&cYou don't have permission to reload the plugin!"
+    permission: maces.admin
+    permission-message: "&cYou must be an operator to reload the plugin!"
     aliases: [rcreload, reloadmaces]
 
   macehelp:
@@ -131,8 +133,8 @@ commands:
     aliases: [maceinfo, rhelp]
 
 permissions:
-  # Admin permissions
-  element.admin:
+  # Admin permissions (OP ONLY)
+  maces.admin:
     description: Allows full management of all player elements and plugin administration
     default: op
     children:
@@ -153,7 +155,7 @@ permissions:
 
   element.use:
     description: Allows using element commands (info, check, list)
-    default: true
+    default: op
 
   # Security permissions
   maces.security:
@@ -194,7 +196,7 @@ permissions:
   # Reset permissions
   maces.reset:
     description: Allows resetting own mace crafting limits
-    default: true
+    default: op
 
   maces.reset.others:
     description: Allows resetting other players' mace crafting limits
@@ -203,7 +205,7 @@ permissions:
   # Player permissions
   element.reroll:
     description: Allows rerolling own element
-    default: true
+    default: op
 
   maces.use:
     description: Allows using mace abilities
@@ -222,18 +224,15 @@ permissions:
     description: Standard player permissions for mace usage
     default: true
     children:
-      element.use: true
-      element.reroll: true
       maces.use: true
       maces.craft: true
       maces.trust: true
-      maces.reset: true
 
   maces.*:
     description: All mace-related permissions
     default: op
     children:
-      element.admin: true
+      maces.admin: true
       maces.give.*: true
       maces.player: true
       maces.reset.others: true
