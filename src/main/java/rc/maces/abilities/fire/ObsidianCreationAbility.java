@@ -20,7 +20,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-// Obsidian Creation Ability - REDUCED CHAT SPAM
+// Obsidian Creation Ability - UPDATED: Larger box, no water conversion text, priority obsidian placement
 public class ObsidianCreationAbility extends BaseAbility {
 
     private final JavaPlugin plugin;
@@ -38,7 +38,7 @@ public class ObsidianCreationAbility extends BaseAbility {
 
         Location center = player.getLocation();
         Map<Location, Material> originalBlocks = new HashMap<>();
-        int waterConverted = 0;
+        int blocksConverted = 0;
 
         // Find all entities in 8 block radius and spawn obsidian on them (except allies)
         Collection<Entity> nearbyEntities = center.getWorld().getNearbyEntities(center, 4, 4, 4); // 8 block range
@@ -53,18 +53,23 @@ public class ObsidianCreationAbility extends BaseAbility {
 
                 Location targetLoc = target.getLocation();
 
-                // Spawn obsidian in a larger box (3x4x3 instead of 3x3x3)
-                for (int x = -1; x <= 1; x++) {
-                    for (int z = -1; z <= 1; z++) {
-                        for (int y = 0; y <= 3; y++) { // Height of 4 blocks
+                // Spawn obsidian in a larger box (4x5x4 instead of 3x4x3)
+                for (int x = -2; x <= 1; x++) { // 4 blocks wide
+                    for (int z = -2; z <= 1; z++) { // 4 blocks deep
+                        for (int y = 0; y <= 4; y++) { // Height of 5 blocks
                             Location obsidianLoc = targetLoc.clone().add(x, y, z);
                             Material blockType = obsidianLoc.getBlock().getType();
 
-                            // Only replace air, water, or lava blocks
-                            if (blockType == Material.AIR || blockType == Material.WATER || blockType == Material.LAVA) {
+                            // Can't break bedrock or reinforced deepslate
+                            if (blockType == Material.BEDROCK || blockType == Material.REINFORCED_DEEPSLATE) {
+                                continue;
+                            }
+
+                            // Replace ALL blocks except bedrock and reinforced deepslate
+                            if (blockType != Material.OBSIDIAN) { // Don't replace existing obsidian
                                 originalBlocks.put(obsidianLoc.clone(), blockType);
                                 obsidianLoc.getBlock().setType(Material.OBSIDIAN);
-                                waterConverted++;
+                                blocksConverted++;
 
                                 // Enhanced visual effects at obsidian creation sites
                                 obsidianLoc.getWorld().spawnParticle(Particle.SMOKE, obsidianLoc.add(0.5, 0.5, 0.5), 15);
@@ -77,19 +82,16 @@ public class ObsidianCreationAbility extends BaseAbility {
             }
         }
 
-        if (waterConverted == 0) {
+        if (blocksConverted == 0) {
             player.sendMessage(Component.text("🖤 No entities found to trap in obsidian!")
                     .color(NamedTextColor.GRAY));
             return; // Don't set cooldown if no obsidian was created
         }
 
-        // SIMPLIFIED: Only one message at ability start
-        player.sendMessage(Component.text("🖤 OBSIDIAN CREATION! Converted " + waterConverted + " water blocks to obsidian!")
-                .color(NamedTextColor.DARK_PURPLE));
         center.getWorld().playSound(center, Sound.BLOCK_LAVA_POP, 2.0f, 0.4f);
         center.getWorld().playSound(center, Sound.BLOCK_STONE_PLACE, 1.5f, 0.6f);
 
-        // Damage entities that were in water when it converted and continue damaging
+        // Damage entities that were trapped and continue damaging
         new BukkitRunnable() {
             int ticks = 0;
 
@@ -101,7 +103,7 @@ public class ObsidianCreationAbility extends BaseAbility {
                     return;
                 }
 
-                // Deal damage to entities standing on obsidian blocks (that were water) every 1.5 seconds
+                // Deal damage to entities standing on obsidian blocks (that were converted) every 1.5 seconds
                 if (ticks % 30 == 0) {
                     // Check in 8 block radius (same as initial range)
                     Collection<Entity> nearby = center.getWorld().getNearbyEntities(center, 4, 4, 4);
