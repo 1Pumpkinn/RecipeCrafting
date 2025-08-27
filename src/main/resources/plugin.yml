@@ -6,8 +6,6 @@ description: Elemental maces
 author: ___Pumpkinn
 depend: []
 load: STARTUP
-website: https://ko-fi.com/1pumpkinn
-
 
 commands:
   # Mace giving commands (OP ONLY)

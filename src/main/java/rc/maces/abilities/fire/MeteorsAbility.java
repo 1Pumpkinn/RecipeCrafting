@@ -28,7 +28,7 @@ public class MeteorsAbility extends BaseAbility {
     private final Random random = new Random();
 
     public MeteorsAbility(CooldownManager cooldownManager, JavaPlugin plugin, TrustManager trustManager) {
-        super("meteors", 15, cooldownManager);
+        super("meteors", 60, cooldownManager);
         this.plugin = plugin;
         this.trustManager = trustManager;
     }
