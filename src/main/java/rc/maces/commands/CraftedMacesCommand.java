@@ -42,18 +42,9 @@ public class CraftedMacesCommand implements CommandExecutor {
             return true;
         }
 
-        // Get personal crafted counts from the crafting listener
-        Map<String, Integer> personalCounts = craftingListener.getPlayerMaceCounts(player.getUniqueId());
-
-        // NEW: Get global crafting status
+        // Get global crafting status
         Map<String, Boolean> globalStatus = craftingListener.getGlobalMaceCraftedStatus();
         Map<String, String> globalCrafters = craftingListener.getGlobalMaceCrafters();
-
-        // Get personal counts
-        int airCrafted = personalCounts.getOrDefault("AIR", 0);
-        int fireCrafted = personalCounts.getOrDefault("FIRE", 0);
-        int waterCrafted = personalCounts.getOrDefault("WATER", 0);
-        int earthCrafted = personalCounts.getOrDefault("EARTH", 0);
 
         // Create the maces status display
         Component message = Component.text("SERVER MACE STATUS:")
@@ -61,22 +52,22 @@ public class CraftedMacesCommand implements CommandExecutor {
                 .decoration(TextDecoration.BOLD, true)
                 .appendNewline()
                 .append(Component.text("• ").color(NamedTextColor.WHITE))
-                .append(createGlobalMaceStatusLine("Air Mace", "AIR", airCrafted, globalStatus, globalCrafters, player.getName()))
+                .append(createGlobalMaceStatusLine("Air Mace", "AIR", globalStatus, globalCrafters, player.getName()))
                 .appendNewline()
                 .append(Component.text("• ").color(NamedTextColor.WHITE))
-                .append(createGlobalMaceStatusLine("Fire Mace", "FIRE", fireCrafted, globalStatus, globalCrafters, player.getName()))
+                .append(createGlobalMaceStatusLine("Fire Mace", "FIRE", globalStatus, globalCrafters, player.getName()))
                 .appendNewline()
                 .append(Component.text("• ").color(NamedTextColor.WHITE))
-                .append(createGlobalMaceStatusLine("Water Mace", "WATER", waterCrafted, globalStatus, globalCrafters, player.getName()))
+                .append(createGlobalMaceStatusLine("Water Mace", "WATER", globalStatus, globalCrafters, player.getName()))
                 .appendNewline()
                 .append(Component.text("• ").color(NamedTextColor.WHITE))
-                .append(createGlobalMaceStatusLine("Earth Mace", "EARTH", earthCrafted, globalStatus, globalCrafters, player.getName()));
+                .append(createGlobalMaceStatusLine("Earth Mace", "EARTH", globalStatus, globalCrafters, player.getName()));
 
         player.sendMessage(message);
         return true;
     }
 
-    private Component createGlobalMaceStatusLine(String maceType, String maceKey, int personalCount,
+    private Component createGlobalMaceStatusLine(String maceType, String maceKey,
                                                  Map<String, Boolean> globalStatus, Map<String, String> globalCrafters,
                                                  String currentPlayerName) {
         // Color code the mace type based on element
@@ -99,24 +90,17 @@ public class CraftedMacesCommand implements CommandExecutor {
         boolean isGlobalCrafted = globalStatus.getOrDefault(maceKey, false);
 
         if (isGlobalCrafted) {
-            String crafter = globalCrafters.getOrDefault(maceKey, "Unknown");
-            if (crafter.equals(currentPlayerName)) {
-                // Player viewing is the one who crafted it
-                return maceNameComponent
-                        .append(Component.text("CRAFTED BY YOU ⭐")
-                                .color(NamedTextColor.GOLD)
-                                .decoration(TextDecoration.BOLD, true));
-            } else {
-                // Someone else crafted it
-                return maceNameComponent
-                        .append(Component.text("Crafted by " + crafter)
-                                .color(NamedTextColor.GRAY));
-            }
-        } else {
-            // Not yet crafted
+            // Show only 1/1
             return maceNameComponent
-                    .append(Component.text("Available to craft")
+                    .append(Component.text("1/1")
+                            .color(NamedTextColor.GOLD)
+                            .decoration(TextDecoration.BOLD, true));
+        } else {
+            // Show only 0/1
+            return maceNameComponent
+                    .append(Component.text("0/1")
                             .color(NamedTextColor.GREEN));
         }
     }
+
 }

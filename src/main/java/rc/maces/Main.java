@@ -104,6 +104,20 @@ public class Main extends JavaPlugin {
             trustManager.cleanupOrphanedTrusts();
         }, 20L); // Run after 1 second delay
 
+        // NEW: Start automatic mace scanning (every 5 minutes)
+        getServer().getScheduler().runTaskLater(this, () -> {
+            // Create a ScanMacesCommand instance to start auto-scanning
+            ScanMacesCommand scanCommand = new ScanMacesCommand(craftingListener, this);
+
+            // Start auto scanning after server has fully loaded
+            getServer().getScheduler().runTaskTimer(this, () -> {
+                craftingListener.scanAllPlayersCommand();
+                getLogger().info("Automatic mace scan completed for all online players");
+            }, 100L, 6000L); // Start after 5 seconds, then every 5 minutes (6000 ticks)
+
+            getLogger().info("Automatic mace scanning enabled - runs every 5 minutes");
+        }, 100L); // 5 second delay to let server fully load
+
         // Plugin startup messages
         getLogger().info("Maces plugin enabled!");
         getLogger().info("Registered " + recipeManager.getRecipeCount() + " custom recipes.");

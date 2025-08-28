@@ -503,6 +503,16 @@ public class CraftingListener implements Listener {
     }
 
     /**
+     * NEW: Manually set a mace as crafted by a specific player
+     */
+    public void setGlobalMaceCrafted(String maceType, String playerName) {
+        globalMaceCrafted.put(maceType, true);
+        globalMaceCrafters.put(maceType, playerName);
+        saveMaceData();
+        plugin.getLogger().info("MANUAL OVERRIDE: " + maceType + " mace set as crafted by " + playerName);
+    }
+
+    /**
      * Reset mace count for a specific type for a player
      */
     public void resetPlayerMaceCount(UUID playerId, String maceType) {

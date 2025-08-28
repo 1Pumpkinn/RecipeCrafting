@@ -57,6 +57,38 @@ public class ScanMacesCommand implements CommandExecutor {
                             .color(NamedTextColor.RED));
                 }
                 return true;
+            } else if (args[0].equalsIgnoreCase("set") && args.length >= 3) {
+                // Manual override: /scanmaces set <mace_type> <player_name>
+                String maceType = args[1].toUpperCase();
+                String playerName = args[2];
+
+                if (!isValidMaceType(maceType)) {
+                    sender.sendMessage(Component.text("❌ Invalid mace type! Use: AIR, FIRE, WATER, or EARTH")
+                            .color(NamedTextColor.RED));
+                    return true;
+                }
+
+                craftingListener.setGlobalMaceCrafted(maceType, playerName);
+                sender.sendMessage(Component.text("✅ Manually set " + maceType.toLowerCase() + " mace as crafted by " + playerName)
+                        .color(NamedTextColor.GREEN));
+                return true;
+            } else if (args[0].equalsIgnoreCase("reset") && args.length >= 2) {
+                // Manual reset: /scanmaces reset <mace_type>
+                String maceType = args[1].toUpperCase();
+
+                if (!isValidMaceType(maceType)) {
+                    sender.sendMessage(Component.text("❌ Invalid mace type! Use: AIR, FIRE, WATER, or EARTH")
+                            .color(NamedTextColor.RED));
+                    return true;
+                }
+
+                craftingListener.resetGlobalMaceStatus(maceType);
+                sender.sendMessage(Component.text("✅ Reset " + maceType.toLowerCase() + " mace status to available")
+                        .color(NamedTextColor.GREEN));
+                return true;
+            } else if (args[0].equalsIgnoreCase("help")) {
+                showHelp(sender);
+                return true;
             }
         }
 
@@ -69,10 +101,47 @@ public class ScanMacesCommand implements CommandExecutor {
 
         sender.sendMessage(Component.text("✅ Online player mace scanning completed! Check console for results.")
                 .color(NamedTextColor.GREEN));
-        sender.sendMessage(Component.text("💡 Use '/scanmaces auto' to enable automatic scanning every 5 minutes")
+        sender.sendMessage(Component.text("💡 Use '/scanmaces help' to see all available options")
                 .color(NamedTextColor.GRAY));
 
         return true;
+    }
+
+    private void showHelp(CommandSender sender) {
+        Component helpMessage = Component.text("=== SCANMACES COMMAND HELP ===")
+                .color(NamedTextColor.GOLD)
+                .appendNewline()
+                .append(Component.text("/scanmaces").color(NamedTextColor.GREEN))
+                .append(Component.text(" - Manual scan of all online players").color(NamedTextColor.GRAY))
+                .appendNewline()
+                .append(Component.text("/scanmaces auto").color(NamedTextColor.GREEN))
+                .append(Component.text(" - Toggle automatic scanning every 5 minutes").color(NamedTextColor.GRAY))
+                .appendNewline()
+                .append(Component.text("/scanmaces stop").color(NamedTextColor.GREEN))
+                .append(Component.text(" - Stop automatic scanning").color(NamedTextColor.GRAY))
+                .appendNewline()
+                .append(Component.text("/scanmaces set <type> <player>").color(NamedTextColor.GREEN))
+                .append(Component.text(" - Manually mark a mace as crafted").color(NamedTextColor.GRAY))
+                .appendNewline()
+                .append(Component.text("/scanmaces reset <type>").color(NamedTextColor.GREEN))
+                .append(Component.text(" - Reset a mace to available status").color(NamedTextColor.GRAY))
+                .appendNewline()
+                .appendNewline()
+                .append(Component.text("Mace types: ").color(NamedTextColor.YELLOW))
+                .append(Component.text("AIR, FIRE, WATER, EARTH").color(NamedTextColor.WHITE))
+                .appendNewline()
+                .append(Component.text("Examples:").color(NamedTextColor.YELLOW))
+                .appendNewline()
+                .append(Component.text("  /scanmaces set FIRE Steve").color(NamedTextColor.AQUA))
+                .appendNewline()
+                .append(Component.text("  /scanmaces reset WATER").color(NamedTextColor.AQUA));
+
+        sender.sendMessage(helpMessage);
+    }
+
+    private boolean isValidMaceType(String maceType) {
+        return maceType.equals("AIR") || maceType.equals("FIRE") ||
+                maceType.equals("WATER") || maceType.equals("EARTH");
     }
 
     private void startAutoScan() {

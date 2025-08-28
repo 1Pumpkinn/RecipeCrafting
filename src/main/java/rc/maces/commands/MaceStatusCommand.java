@@ -60,13 +60,13 @@ public class MaceStatusCommand implements CommandExecutor {
         if (isGlobalCrafted) {
             String crafter = globalCrafters.getOrDefault(maceKey, "Unknown");
             return maceNameComponent
-                    .append(Component.text("CRAFTED by " + crafter)
+                    .append(Component.text("1/1 - CRAFTED by " + crafter)
                             .color(NamedTextColor.GRAY))
                     .append(Component.text(" ❌")
                             .color(NamedTextColor.RED));
         } else {
             return maceNameComponent
-                    .append(Component.text("AVAILABLE")
+                    .append(Component.text("0/1 - AVAILABLE")
                             .color(NamedTextColor.GREEN))
                     .append(Component.text(" ✅")
                             .color(NamedTextColor.GREEN));
