@@ -54,7 +54,7 @@ public class Main extends JavaPlugin {
 
         // Register reset command
         getCommand("resetmaces").setExecutor(new ResetMaceCommand(elementManager, maceManager, craftingListener));
-        getCommand("scanmaces").setExecutor(new ScanMacesCommand(craftingListener));
+        getCommand("scanmaces").setExecutor(new ScanMacesCommand(craftingListener, this));
 
         // Register trust commands
         getCommand("trust").setExecutor(new TrustCommand(trustManager));
@@ -122,10 +122,14 @@ public class Main extends JavaPlugin {
         getLogger().info("- Advanced mace security system active");
         getLogger().info("- Movement prevention system active");
         getLogger().info("- Trust system debug tools available (/trustdebug)");
+        getLogger().info("- Automatic mace scanning available (/scanmaces auto)");
     }
 
     @Override
     public void onDisable() {
+        // Stop automatic scanning if running
+        ScanMacesCommand.stopAutoScan();
+
         if (recipeManager != null) {
             recipeManager.unregisterAllRecipes();
         }

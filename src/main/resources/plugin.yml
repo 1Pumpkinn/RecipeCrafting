@@ -4,6 +4,7 @@ main: rc.maces.Main
 api-version: '1.21'
 description: Elemental maces
 author: ___Pumpkinn
+website: https://ko-fi.com/1pumpkinn
 depend: []
 load: STARTUP
 

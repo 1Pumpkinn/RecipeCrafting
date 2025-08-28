@@ -154,113 +154,79 @@ public class CraftingListener implements Listener {
         new BukkitRunnable() {
             @Override
             public void run() {
-                for (Player player : Bukkit.getOnlinePlayers()) {
-                    scanPlayerForMaces(player);
+                try {
+                    int scannedCount = 0;
+                    for (Player player : Bukkit.getOnlinePlayers()) {
+                        if (player != null && player.isOnline()) {
+                            scanPlayerForMaces(player);
+                            scannedCount++;
+                        }
+                    }
+                    plugin.getLogger().info("Completed mace scanning for " + scannedCount + " online players.");
+                } catch (Exception e) {
+                    plugin.getLogger().severe("Error during mass player scanning: " + e.getMessage());
                 }
-                plugin.getLogger().info("Completed mace scanning for all online players.");
             }
         }.runTaskLater(plugin, 40L); // 2 second delay to let server fully load
-    }
-
-    /**
-     * Scan all players (both online and offline) for existing maces
-     */
-    public void scanAllPlayersIncludingOffline() {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                int onlineCount = 0;
-                int offlineCount = 0;
-
-                // Scan online players first
-                for (Player player : Bukkit.getOnlinePlayers()) {
-                    scanPlayerForMaces(player);
-                    onlineCount++;
-                }
-
-                // Scan offline players
-                for (org.bukkit.OfflinePlayer offlinePlayer : Bukkit.getOfflinePlayers()) {
-                    if (!offlinePlayer.isOnline() && offlinePlayer.hasPlayedBefore()) {
-                        scanOfflinePlayerForMaces(offlinePlayer);
-                        offlineCount++;
-                    }
-                }
-
-                plugin.getLogger().info("Completed mace scanning for " + onlineCount + " online players and " + offlineCount + " offline players.");
-            }
-        }.runTaskAsynchronously(plugin); // Run async since this could take a while
-    }
-
-    /**
-     * Scan an offline player's data for maces
-     */
-    private void scanOfflinePlayerForMaces(org.bukkit.OfflinePlayer offlinePlayer) {
-        try {
-            // Load the offline player's data
-            org.bukkit.entity.Player player = offlinePlayer.getPlayer();
-
-            // If the player object is null, we need to use the server's player data loading
-            if (player == null) {
-                // Get the player's data file path
-                String worldName = Bukkit.getWorlds().get(0).getName(); // Default world
-                File playerDataFolder = new File(Bukkit.getWorldContainer(), worldName + "/playerdata");
-                File playerDataFile = new File(playerDataFolder, offlinePlayer.getUniqueId().toString() + ".dat");
-
-                if (!playerDataFile.exists()) {
-                    return; // No player data file
-                }
-
-                // This is a simplified approach - you might need to use NBT libraries
-                // For now, we'll skip offline scanning and only do it when players are online
-                // since reading NBT data directly is complex without additional libraries
-                return;
-            }
-        } catch (Exception e) {
-            plugin.getLogger().warning("Failed to scan offline player " + offlinePlayer.getName() + ": " + e.getMessage());
-        }
     }
 
     /**
      * Scan a specific player's inventory and ender chest for maces
      */
     private void scanPlayerForMaces(Player player) {
-        Map<String, Integer> foundMaces = new HashMap<>();
+        try {
+            Map<String, Integer> foundMaces = new HashMap<>();
 
-        // Scan player's main inventory
-        for (ItemStack item : player.getInventory().getContents()) {
-            String maceType = identifyMaceType(item);
-            if (maceType != null) {
-                foundMaces.put(maceType, foundMaces.getOrDefault(maceType, 0) + item.getAmount());
+            // Scan player's main inventory with null checks
+            ItemStack[] inventoryContents = player.getInventory().getContents();
+            if (inventoryContents != null) {
+                for (ItemStack item : inventoryContents) {
+                    if (item != null) {
+                        String maceType = identifyMaceType(item);
+                        if (maceType != null) {
+                            foundMaces.put(maceType, foundMaces.getOrDefault(maceType, 0) + item.getAmount());
+                        }
+                    }
+                }
             }
-        }
 
-        // Scan player's ender chest
-        for (ItemStack item : player.getEnderChest().getContents()) {
-            String maceType = identifyMaceType(item);
-            if (maceType != null) {
-                foundMaces.put(maceType, foundMaces.getOrDefault(maceType, 0) + item.getAmount());
+            // Scan player's ender chest with null checks
+            ItemStack[] enderChestContents = player.getEnderChest().getContents();
+            if (enderChestContents != null) {
+                for (ItemStack item : enderChestContents) {
+                    if (item != null) {
+                        String maceType = identifyMaceType(item);
+                        if (maceType != null) {
+                            foundMaces.put(maceType, foundMaces.getOrDefault(maceType, 0) + item.getAmount());
+                        }
+                    }
+                }
             }
-        }
 
-        // Update the player's mace counts based on what we found
-        boolean updated = false;
-        UUID playerId = player.getUniqueId();
+            // Update the player's mace counts based on what we found
+            boolean updated = false;
+            UUID playerId = player.getUniqueId();
 
-        for (Map.Entry<String, Integer> entry : foundMaces.entrySet()) {
-            String maceType = entry.getKey();
-            int foundCount = Math.min(entry.getValue(), MAX_MACES_PER_TYPE); // Cap at max allowed
-            int currentCount = getPlayerMaceCount(playerId, maceType);
+            for (Map.Entry<String, Integer> entry : foundMaces.entrySet()) {
+                String maceType = entry.getKey();
+                int foundCount = Math.min(entry.getValue(), MAX_MACES_PER_TYPE); // Cap at max allowed
+                int currentCount = getPlayerMaceCount(playerId, maceType);
 
-            if (foundCount > currentCount) {
-                setPlayerMaceCount(playerId, maceType, foundCount);
-                updated = true;
-                plugin.getLogger().info("Updated " + player.getName() + "'s " + maceType.toLowerCase() +
-                        " mace count from " + currentCount + " to " + foundCount);
+                if (foundCount > currentCount) {
+                    setPlayerMaceCount(playerId, maceType, foundCount);
+                    updated = true;
+                    // Only log significant updates to reduce console spam
+                    plugin.getLogger().info("Updated " + player.getName() + "'s " + maceType.toLowerCase() +
+                            " mace count from " + currentCount + " to " + foundCount);
+                }
             }
-        }
 
-        if (updated) {
-            saveMaceData();
+            if (updated) {
+                saveMaceData();
+            }
+        } catch (Exception e) {
+            // Catch any exceptions to prevent console spam
+            plugin.getLogger().warning("Failed to scan player " + player.getName() + " for maces: " + e.getMessage());
         }
     }
 
@@ -273,45 +239,59 @@ public class CraftingListener implements Listener {
             return null;
         }
 
-        ItemMeta meta = item.getItemMeta();
-
-        // Check display name first
-        if (meta.hasDisplayName()) {
-            String displayName = meta.getDisplayName().toLowerCase();
-            if (displayName.contains("air mace")) return "AIR";
-            if (displayName.contains("fire mace")) return "FIRE";
-            if (displayName.contains("water mace")) return "WATER";
-            if (displayName.contains("earth mace")) return "EARTH";
-        }
-
-        // Check lore if display name doesn't match
-        if (meta.hasLore()) {
-            for (String lore : meta.getLore()) {
-                String loreLower = lore.toLowerCase();
-                if (loreLower.contains("air mace")) return "AIR";
-                if (loreLower.contains("fire mace")) return "FIRE";
-                if (loreLower.contains("water mace")) return "WATER";
-                if (loreLower.contains("earth mace")) return "EARTH";
-
-                // Alternative: check for elemental keywords
-                if (loreLower.contains("elemental") && loreLower.contains("air")) return "AIR";
-                if (loreLower.contains("elemental") && loreLower.contains("fire")) return "FIRE";
-                if (loreLower.contains("elemental") && loreLower.contains("water")) return "WATER";
-                if (loreLower.contains("elemental") && loreLower.contains("earth")) return "EARTH";
+        try {
+            ItemMeta meta = item.getItemMeta();
+            if (meta == null) {
+                return null;
             }
-        }
 
-        // Check custom model data or persistent data container if you use those
-        // Example:
-        // if (meta.hasCustomModelData()) {
-        //     int modelData = meta.getCustomModelData();
-        //     switch (modelData) {
-        //         case 1001: return "AIR";
-        //         case 1002: return "FIRE";
-        //         case 1003: return "WATER";
-        //         case 1004: return "EARTH";
-        //     }
-        // }
+            // Check display name first
+            if (meta.hasDisplayName()) {
+                String displayName = meta.getDisplayName();
+                if (displayName != null) {
+                    String displayNameLower = displayName.toLowerCase();
+                    if (displayNameLower.contains("air mace")) return "AIR";
+                    if (displayNameLower.contains("fire mace")) return "FIRE";
+                    if (displayNameLower.contains("water mace")) return "WATER";
+                    if (displayNameLower.contains("earth mace")) return "EARTH";
+                }
+            }
+
+            // Check lore if display name doesn't match
+            if (meta.hasLore() && meta.getLore() != null) {
+                for (String lore : meta.getLore()) {
+                    if (lore != null) {
+                        String loreLower = lore.toLowerCase();
+                        if (loreLower.contains("air mace")) return "AIR";
+                        if (loreLower.contains("fire mace")) return "FIRE";
+                        if (loreLower.contains("water mace")) return "WATER";
+                        if (loreLower.contains("earth mace")) return "EARTH";
+
+                        // Alternative: check for elemental keywords
+                        if (loreLower.contains("elemental") && loreLower.contains("air")) return "AIR";
+                        if (loreLower.contains("elemental") && loreLower.contains("fire")) return "FIRE";
+                        if (loreLower.contains("elemental") && loreLower.contains("water")) return "WATER";
+                        if (loreLower.contains("elemental") && loreLower.contains("earth")) return "EARTH";
+                    }
+                }
+            }
+
+            // Check custom model data or persistent data container if you use those
+            // Example:
+            // if (meta.hasCustomModelData()) {
+            //     int modelData = meta.getCustomModelData();
+            //     switch (modelData) {
+            //         case 1001: return "AIR";
+            //         case 1002: return "FIRE";
+            //         case 1003: return "WATER";
+            //         case 1004: return "EARTH";
+            //     }
+            // }
+
+        } catch (Exception e) {
+            // Silently handle any exceptions to prevent console spam
+            return null;
+        }
 
         return null;
     }
@@ -321,13 +301,6 @@ public class CraftingListener implements Listener {
      */
     public void scanAllPlayersCommand() {
         scanAllPlayersForMaces();
-    }
-
-    /**
-     * Command to manually scan all players including offline ones (for admin use)
-     */
-    public void scanAllPlayersIncludingOfflineCommand() {
-        scanAllPlayersIncludingOffline();
     }
 
     /**
