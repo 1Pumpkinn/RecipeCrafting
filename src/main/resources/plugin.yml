@@ -49,6 +49,11 @@ commands:
     permission-message: "&cYou must be an operator to reroll elements!"
     aliases: [elementreroll, rerollelement]
 
+  macestatus:
+    description: View server-wide mace crafting status
+    usage: /<command>
+    aliases: [mstatus, servermaces, globalstatus]
+
   # Reset mace crafting limits (OP ONLY)
   resetmaces:
     description: Reset mace crafting limits for yourself or another player

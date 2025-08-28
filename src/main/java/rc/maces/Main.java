@@ -68,6 +68,7 @@ public class Main extends JavaPlugin {
 
         // Register security command
         getCommand("macesecurity").setExecutor(new MaceSecurityCommand(craftingRestrictionListener, heavyCoreMonitor));
+        getCommand("macestatus").setExecutor(new MaceStatusCommand(craftingListener));
 
         // Register event listeners
         getServer().getPluginManager().registerEvents(
@@ -106,23 +107,7 @@ public class Main extends JavaPlugin {
         // Plugin startup messages
         getLogger().info("Maces plugin enabled!");
         getLogger().info("Registered " + recipeManager.getRecipeCount() + " custom recipes.");
-        getLogger().info("Element system initialized - players will be assigned random elements on join!");
-        getLogger().info("Trust system initialized - players can now form alliances!");
-        getLogger().info("FEATURES ENABLED:");
-        getLogger().info("- Element-based passive abilities for all players");
-        getLogger().info("- Enhanced mace abilities with cooldowns");
-        getLogger().info("- Trust/alliance system with PvP protection");
-        getLogger().info("- Element-restricted crafting system");
-        getLogger().info("- Real-time ability status display");
-        getLogger().info("- Auto element switching when picking up maces");
-        getLogger().info("- One mace per player limit enforced");
-        getLogger().info("- Normal mace crafting disabled");
-        getLogger().info("- Chat spam prevention active");
-        getLogger().info("- Mace crafting reset system enabled");
-        getLogger().info("- Advanced mace security system active");
-        getLogger().info("- Movement prevention system active");
-        getLogger().info("- Trust system debug tools available (/trustdebug)");
-        getLogger().info("- Automatic mace scanning available (/scanmaces auto)");
+
     }
 
     @Override

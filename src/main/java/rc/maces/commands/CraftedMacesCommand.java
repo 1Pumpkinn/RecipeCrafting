@@ -42,37 +42,43 @@ public class CraftedMacesCommand implements CommandExecutor {
             return true;
         }
 
-        // Get crafted counts from the crafting listener
-        Map<String, Integer> craftedCounts = craftingListener.getPlayerMaceCounts(player.getUniqueId());
+        // Get personal crafted counts from the crafting listener
+        Map<String, Integer> personalCounts = craftingListener.getPlayerMaceCounts(player.getUniqueId());
 
-        // Get crafted counts (how many they've actually crafted)
-        int airCrafted = craftedCounts.getOrDefault("AIR", 0);
-        int fireCrafted = craftedCounts.getOrDefault("FIRE", 0);
-        int waterCrafted = craftedCounts.getOrDefault("WATER", 0);
-        int earthCrafted = craftedCounts.getOrDefault("EARTH", 0);
+        // NEW: Get global crafting status
+        Map<String, Boolean> globalStatus = craftingListener.getGlobalMaceCraftedStatus();
+        Map<String, String> globalCrafters = craftingListener.getGlobalMaceCrafters();
 
-        // Create the crafted maces display
-        Component message = Component.text("CRAFTED MACES:")
+        // Get personal counts
+        int airCrafted = personalCounts.getOrDefault("AIR", 0);
+        int fireCrafted = personalCounts.getOrDefault("FIRE", 0);
+        int waterCrafted = personalCounts.getOrDefault("WATER", 0);
+        int earthCrafted = personalCounts.getOrDefault("EARTH", 0);
+
+        // Create the maces status display
+        Component message = Component.text("SERVER MACE STATUS:")
                 .color(NamedTextColor.LIGHT_PURPLE)
                 .decoration(TextDecoration.BOLD, true)
                 .appendNewline()
                 .append(Component.text("• ").color(NamedTextColor.WHITE))
-                .append(createMaceStatusLine("Air Mace", airCrafted))
+                .append(createGlobalMaceStatusLine("Air Mace", "AIR", airCrafted, globalStatus, globalCrafters, player.getName()))
                 .appendNewline()
                 .append(Component.text("• ").color(NamedTextColor.WHITE))
-                .append(createMaceStatusLine("Fire Mace", fireCrafted))
+                .append(createGlobalMaceStatusLine("Fire Mace", "FIRE", fireCrafted, globalStatus, globalCrafters, player.getName()))
                 .appendNewline()
                 .append(Component.text("• ").color(NamedTextColor.WHITE))
-                .append(createMaceStatusLine("Water Mace", waterCrafted))
+                .append(createGlobalMaceStatusLine("Water Mace", "WATER", waterCrafted, globalStatus, globalCrafters, player.getName()))
                 .appendNewline()
                 .append(Component.text("• ").color(NamedTextColor.WHITE))
-                .append(createMaceStatusLine("Earth Mace", earthCrafted));
+                .append(createGlobalMaceStatusLine("Earth Mace", "EARTH", earthCrafted, globalStatus, globalCrafters, player.getName()));
 
         player.sendMessage(message);
         return true;
     }
 
-    private Component createMaceStatusLine(String maceType, int craftedCount) {
+    private Component createGlobalMaceStatusLine(String maceType, String maceKey, int personalCount,
+                                                 Map<String, Boolean> globalStatus, Map<String, String> globalCrafters,
+                                                 String currentPlayerName) {
         // Color code the mace type based on element
         NamedTextColor maceColor;
         if (maceType.contains("Air")) {
@@ -87,9 +93,30 @@ public class CraftedMacesCommand implements CommandExecutor {
             maceColor = NamedTextColor.WHITE;
         }
 
-        return Component.text(maceType + " | ")
-                .color(maceColor)
-                .append(Component.text("Crafted: " + craftedCount + "/1")
-                        .color(NamedTextColor.GREEN));
+        Component maceNameComponent = Component.text(maceType + " | ")
+                .color(maceColor);
+
+        boolean isGlobalCrafted = globalStatus.getOrDefault(maceKey, false);
+
+        if (isGlobalCrafted) {
+            String crafter = globalCrafters.getOrDefault(maceKey, "Unknown");
+            if (crafter.equals(currentPlayerName)) {
+                // Player viewing is the one who crafted it
+                return maceNameComponent
+                        .append(Component.text("CRAFTED BY YOU ⭐")
+                                .color(NamedTextColor.GOLD)
+                                .decoration(TextDecoration.BOLD, true));
+            } else {
+                // Someone else crafted it
+                return maceNameComponent
+                        .append(Component.text("Crafted by " + crafter)
+                                .color(NamedTextColor.GRAY));
+            }
+        } else {
+            // Not yet crafted
+            return maceNameComponent
+                    .append(Component.text("Available to craft")
+                            .color(NamedTextColor.GREEN));
+        }
     }
 }
