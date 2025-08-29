@@ -15,11 +15,14 @@ public class Main extends JavaPlugin {
     private MaceManager maceManager;
     private RecipeManager recipeManager;
     private TrustManager trustManager;
+    private CombatTimer combatTimer; // Add CombatTimer
     private PassiveEffectsListener passiveEffectsListener;
     private CraftingListener craftingListener;
     private CraftingRestrictionListener craftingRestrictionListener;
     private HeavyCoreMonitor heavyCoreMonitor;
     private MovementPreventionListener movementPreventionListener;
+    private SpawnProtectionListener spawnProtectionListener; // Add SpawnProtectionListener
+    private CombatCommandBlocker combatCommandBlocker; // Add command blocker
 
     @Override
     public void onEnable() {
@@ -27,6 +30,10 @@ public class Main extends JavaPlugin {
         cooldownManager = new CooldownManager();
         elementManager = new ElementManager(this);
         trustManager = new TrustManager(this);
+
+        // Initialize combat timer after trust manager
+        combatTimer = new CombatTimer(this, trustManager);
+
         maceManager = new MaceManager(this, cooldownManager, trustManager);
         recipeManager = new RecipeManager(this, maceManager);
 
@@ -39,6 +46,12 @@ public class Main extends JavaPlugin {
 
         // Initialize movement prevention listener
         movementPreventionListener = new MovementPreventionListener();
+
+        // Initialize spawn protection listener
+        spawnProtectionListener = new SpawnProtectionListener(combatTimer);
+
+        // Initialize combat command blocker
+        combatCommandBlocker = new CombatCommandBlocker(combatTimer);
 
         // Register mace commands
         getCommand("airmace").setExecutor(new AirmaceCommand(maceManager));
@@ -70,6 +83,10 @@ public class Main extends JavaPlugin {
         getCommand("macesecurity").setExecutor(new MaceSecurityCommand(craftingRestrictionListener, heavyCoreMonitor));
         getCommand("macestatus").setExecutor(new MaceStatusCommand(craftingListener));
 
+        // Register combat command
+        CombatCommand combatCommand = new CombatCommand(combatTimer);
+        getCommand("combat").setExecutor(combatCommand);
+
         // Register event listeners
         getServer().getPluginManager().registerEvents(
                 new MaceListener(maceManager, elementManager, trustManager), this);
@@ -88,6 +105,21 @@ public class Main extends JavaPlugin {
         // Register movement prevention listener (CRITICAL for Vine Trap)
         getServer().getPluginManager().registerEvents(
                 movementPreventionListener, this);
+
+        // Register combat timer listener (CRITICAL for combat logging)
+        getServer().getPluginManager().registerEvents(
+                combatTimer, this);
+
+        // Register spawn protection listener
+        getServer().getPluginManager().registerEvents(
+                spawnProtectionListener, this);
+
+        // Register combat command blocker
+        getServer().getPluginManager().registerEvents(
+                combatCommandBlocker, this);
+
+        // Link combat command with command blocker
+        combatCommand.setCommandBlocker(combatCommandBlocker);
 
         // Register recipes
         recipeManager.registerAllRecipes();
@@ -121,7 +153,7 @@ public class Main extends JavaPlugin {
         // Plugin startup messages
         getLogger().info("Maces plugin enabled!");
         getLogger().info("Registered " + recipeManager.getRecipeCount() + " custom recipes.");
-
+        getLogger().info("Combat timer system enabled!");
     }
 
     @Override
@@ -166,6 +198,10 @@ public class Main extends JavaPlugin {
         return trustManager;
     }
 
+    public CombatTimer getCombatTimer() {
+        return combatTimer;
+    }
+
     public PassiveEffectsListener getPassiveEffectsListener() {
         return passiveEffectsListener;
     }
@@ -184,5 +220,13 @@ public class Main extends JavaPlugin {
 
     public MovementPreventionListener getMovementPreventionListener() {
         return movementPreventionListener;
+    }
+
+    public SpawnProtectionListener getSpawnProtectionListener() {
+        return spawnProtectionListener;
+    }
+
+    public CombatCommandBlocker getCombatCommandBlocker() {
+        return combatCommandBlocker;
     }
 }

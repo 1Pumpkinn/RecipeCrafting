@@ -8,17 +8,25 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import rc.maces.listeners.CombatCommandBlocker;
 import rc.maces.managers.CombatTimer;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class CombatCommand implements CommandExecutor {
 
     private final CombatTimer combatTimer;
+    private CombatCommandBlocker commandBlocker;
 
     public CombatCommand(CombatTimer combatTimer) {
         this.combatTimer = combatTimer;
+    }
+
+    // Method to set the command blocker (called from Main.java after initialization)
+    public void setCommandBlocker(CombatCommandBlocker commandBlocker) {
+        this.commandBlocker = commandBlocker;
     }
 
     @Override
@@ -55,6 +63,20 @@ public class CombatCommand implements CommandExecutor {
                     }
                     String reason = args.length > 2 ? String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length)) : "Admin command";
                     forcePlayerIntoCombat(player, args[1], reason);
+                    return true;
+                case "protection":
+                    if (args.length != 2) {
+                        player.sendMessage(Component.text("Usage: /combat protection <player>")
+                                .color(NamedTextColor.RED));
+                        return true;
+                    }
+                    showPlayerProtectionStatus(player, args[1]);
+                    return true;
+                case "safezone":
+                    showSafeZoneInfo(player);
+                    return true;
+                case "commands":
+                    showCommandInfo(player);
                     return true;
                 case "help":
                     showAdminHelp(player);
@@ -157,6 +179,143 @@ public class CombatCommand implements CommandExecutor {
         admin.getServer().getLogger().info("Admin " + admin.getName() + " forced " + target.getName() + " into combat: " + reason);
     }
 
+    private void showPlayerProtectionStatus(Player admin, String targetName) {
+        Player target = Bukkit.getPlayer(targetName);
+
+        if (target == null) {
+            admin.sendMessage(Component.text("❌ Player '" + targetName + "' is not online!")
+                    .color(NamedTextColor.RED));
+            return;
+        }
+
+        admin.sendMessage(Component.text("═══════ PROTECTION STATUS FOR " + target.getName().toUpperCase() + " ═══════")
+                .color(NamedTextColor.GOLD));
+
+        // Combat status
+        if (combatTimer.isInCombat(target)) {
+            admin.sendMessage(Component.text("⚔ Combat Status: IN COMBAT (" + combatTimer.getRemainingCombatTimeFormatted(target) + ")")
+                    .color(NamedTextColor.RED));
+        } else {
+            admin.sendMessage(Component.text("⚔ Combat Status: Not in combat")
+                    .color(NamedTextColor.GREEN));
+        }
+
+        // Spawn protection
+        if (combatTimer.hasSpawnProtection(target)) {
+            long remaining = combatTimer.getRemainingSpawnProtection(target) / 1000;
+            admin.sendMessage(Component.text("🛡 Spawn Protection: " + remaining + " seconds remaining")
+                    .color(NamedTextColor.AQUA));
+        } else {
+            admin.sendMessage(Component.text("🛡 Spawn Protection: None")
+                    .color(NamedTextColor.GRAY));
+        }
+
+        // Safe zone status
+        String safeZone = combatTimer.getSafeZoneName(target.getLocation());
+        if (safeZone != null) {
+            admin.sendMessage(Component.text("🏠 Location: " + safeZone + " (Safe Zone)")
+                    .color(NamedTextColor.GREEN));
+        } else {
+            admin.sendMessage(Component.text("🏠 Location: PvP Zone")
+                    .color(NamedTextColor.RED));
+        }
+
+        admin.sendMessage(Component.text("═════════════════════════════════════════")
+                .color(NamedTextColor.GOLD));
+    }
+
+    private void showSafeZoneInfo(Player admin) {
+        admin.sendMessage(Component.text("═══════════════════════════════════")
+                .color(NamedTextColor.GOLD));
+        admin.sendMessage(Component.text("     SAFE ZONE INFORMATION")
+                .color(NamedTextColor.GOLD)
+                .decoration(TextDecoration.BOLD, true));
+        admin.sendMessage(Component.text("═══════════════════════════════════")
+                .color(NamedTextColor.GOLD));
+
+        admin.sendMessage(Component.text("Safe zones prevent PvP and combat initiation.")
+                .color(NamedTextColor.GRAY));
+        admin.sendMessage(Component.text("Players in safe zones cannot attack or be attacked.")
+                .color(NamedTextColor.GRAY));
+        admin.sendMessage(Component.text(""));
+
+        // Show configured safe zones (this would need to be implemented in CombatTimer)
+        admin.sendMessage(Component.text("Configured Safe Zones:")
+                .color(NamedTextColor.YELLOW));
+        admin.sendMessage(Component.text("• Spawn Area (100 block radius)")
+                .color(NamedTextColor.DARK_GRAY));
+
+        admin.sendMessage(Component.text("═══════════════════════════════════")
+                .color(NamedTextColor.GOLD));
+    }
+
+    private void showCommandInfo(Player admin) {
+        if (commandBlocker == null) {
+            admin.sendMessage(Component.text("❌ Command blocker not initialized!")
+                    .color(NamedTextColor.RED));
+            return;
+        }
+
+        admin.sendMessage(Component.text("═══════════════════════════════════")
+                .color(NamedTextColor.GOLD));
+        admin.sendMessage(Component.text("   COMBAT COMMAND RESTRICTIONS")
+                .color(NamedTextColor.GOLD)
+                .decoration(TextDecoration.BOLD, true));
+        admin.sendMessage(Component.text("═══════════════════════════════════")
+                .color(NamedTextColor.GOLD));
+
+        admin.sendMessage(Component.text("When players are in combat, most commands are blocked.")
+                .color(NamedTextColor.GRAY));
+        admin.sendMessage(Component.text(""));
+
+        // Show some allowed commands
+        Set<String> allowedCommands = commandBlocker.getAllowedCommands();
+        admin.sendMessage(Component.text("Always Allowed Commands (" + allowedCommands.size() + "):")
+                .color(NamedTextColor.GREEN));
+
+        StringBuilder allowedList = new StringBuilder();
+        int count = 0;
+        for (String cmd : allowedCommands) {
+            if (count > 0) allowedList.append(", ");
+            allowedList.append(cmd);
+            count++;
+            if (count >= 10) {
+                allowedList.append("...");
+                break;
+            }
+        }
+        admin.sendMessage(Component.text("• " + allowedList.toString())
+                .color(NamedTextColor.DARK_GREEN));
+
+        admin.sendMessage(Component.text(""));
+
+        // Show some blocked commands
+        Set<String> blockedCommands = commandBlocker.getBlockedCommands();
+        admin.sendMessage(Component.text("Always Blocked Commands (" + blockedCommands.size() + "):")
+                .color(NamedTextColor.RED));
+
+        StringBuilder blockedList = new StringBuilder();
+        count = 0;
+        for (String cmd : blockedCommands) {
+            if (count > 0) blockedList.append(", ");
+            blockedList.append(cmd);
+            count++;
+            if (count >= 10) {
+                blockedList.append("...");
+                break;
+            }
+        }
+        admin.sendMessage(Component.text("• " + blockedList.toString())
+                .color(NamedTextColor.DARK_RED));
+
+        admin.sendMessage(Component.text(""));
+        admin.sendMessage(Component.text("Note: Admins can use additional commands during combat.")
+                .color(NamedTextColor.YELLOW));
+
+        admin.sendMessage(Component.text("═══════════════════════════════════")
+                .color(NamedTextColor.GOLD));
+    }
+
     private void showAdminHelp(Player admin) {
         admin.sendMessage(Component.text("═══════════════════════════════════")
                 .color(NamedTextColor.GOLD));
@@ -194,6 +353,11 @@ public class CombatCommand implements CommandExecutor {
         admin.sendMessage(Component.text("/combat safezone")
                 .color(NamedTextColor.YELLOW)
                 .append(Component.text(" - Show safe zone information")
+                        .color(NamedTextColor.GRAY)));
+
+        admin.sendMessage(Component.text("/combat commands")
+                .color(NamedTextColor.YELLOW)
+                .append(Component.text(" - List blocked/allowed commands")
                         .color(NamedTextColor.GRAY)));
 
         admin.sendMessage(Component.text("/combat help")
