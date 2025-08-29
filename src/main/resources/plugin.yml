@@ -72,6 +72,12 @@ commands:
     usage: /<command>
     aliases: [maces, maceinv, maceinventory]
 
+  combat:
+    description: Check combat status or manage combat (admin)
+    usage: /combat [list|remove|force] [player] [reason]
+    permission: maces.combat
+    permission-message: "You don't have permission to use this command!"
+
   # Trust system commands
   trust:
     description: Send a trust request to another player
@@ -185,6 +191,10 @@ permissions:
       firemace.give: true
       watermace.give: true
       earthmace.give: true
+
+  maces.combat:
+    description: Allow using the combat command
+    default: true
 
   airmace.give:
     description: Allows giving air maces
