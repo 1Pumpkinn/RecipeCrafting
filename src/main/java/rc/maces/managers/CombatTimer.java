@@ -6,7 +6,6 @@ import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -14,7 +13,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -108,6 +106,14 @@ public class CombatTimer implements Listener {
         putInCombat(attacker, victim);
 
         plugin.getLogger().info("Combat initiated between " + attacker.getName() + " and " + victim.getName());
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+
+        // Give new players spawn protection
+        giveSpawnProtection(player, "joined the server");
     }
 
     @EventHandler
@@ -364,6 +370,127 @@ public class CombatTimer implements Listener {
                 .color(NamedTextColor.GOLD));
     }
 
+    // ============ SPAWN PROTECTION METHODS ============
+
+    /**
+     * Give a player spawn protection
+     */
+    public void giveSpawnProtection(Player player, String reason) {
+        if (player == null || !player.isOnline()) return;
+
+        spawnProtection.put(player.getUniqueId(), System.currentTimeMillis());
+
+        player.sendMessage(Component.text("🛡 Spawn protection granted for " + (SPAWN_PROTECTION_TIME/1000) + " seconds (" + reason + ")")
+                .color(NamedTextColor.AQUA));
+
+        plugin.getLogger().info("Granted spawn protection to " + player.getName() + ": " + reason);
+    }
+
+    /**
+     * Check if a player has spawn protection
+     */
+    public boolean hasSpawnProtection(Player player) {
+        if (player == null) return false;
+
+        Long protectionTime = spawnProtection.get(player.getUniqueId());
+        if (protectionTime == null) return false;
+
+        if (System.currentTimeMillis() - protectionTime > SPAWN_PROTECTION_TIME) {
+            spawnProtection.remove(player.getUniqueId());
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Get remaining spawn protection time in milliseconds
+     */
+    public long getRemainingSpawnProtection(Player player) {
+        if (player == null) return 0;
+
+        Long protectionTime = spawnProtection.get(player.getUniqueId());
+        if (protectionTime == null) return 0;
+
+        long remaining = SPAWN_PROTECTION_TIME - (System.currentTimeMillis() - protectionTime);
+        if (remaining <= 0) {
+            spawnProtection.remove(player.getUniqueId());
+            return 0;
+        }
+
+        return remaining;
+    }
+
+    /**
+     * Remove spawn protection from a player
+     */
+    public void removeSpawnProtection(Player player, String reason) {
+        if (player == null) return;
+
+        if (spawnProtection.remove(player.getUniqueId()) != null) {
+            player.sendMessage(Component.text("🛡 Spawn protection removed: " + reason)
+                    .color(NamedTextColor.GRAY));
+            plugin.getLogger().info("Removed spawn protection from " + player.getName() + ": " + reason);
+        }
+    }
+
+    // ============ SAFE ZONE METHODS ============
+
+    /**
+     * Check if a location is in a safe zone
+     */
+    public boolean isInSafeZone(Location location) {
+        if (location == null || location.getWorld() == null) return false;
+
+        String worldName = location.getWorld().getName();
+        SafeZone safeZone = safeZones.get(worldName);
+
+        return safeZone != null && safeZone.isInside(location);
+    }
+
+    /**
+     * Get the name of the safe zone at a location (null if not in safe zone)
+     */
+    public String getSafeZoneName(Location location) {
+        if (location == null || location.getWorld() == null) return null;
+
+        String worldName = location.getWorld().getName();
+        SafeZone safeZone = safeZones.get(worldName);
+
+        if (safeZone != null && safeZone.isInside(location)) {
+            return safeZone.name;
+        }
+
+        return null;
+    }
+
+    /**
+     * Add a safe zone to a world
+     */
+    public void addSafeZone(String worldName, int centerX, int centerZ, int radius, String name) {
+        safeZones.put(worldName, new SafeZone(centerX, centerZ, radius, name));
+        plugin.getLogger().info("Added safe zone: " + name + " at " + worldName + " (" + centerX + ", " + centerZ + ") radius " + radius);
+    }
+
+    /**
+     * Remove a safe zone from a world
+     */
+    public void removeSafeZone(String worldName) {
+        SafeZone removed = safeZones.remove(worldName);
+        if (removed != null) {
+            plugin.getLogger().info("Removed safe zone: " + removed.name + " from " + worldName);
+        }
+    }
+
+    /**
+     * Get all safe zones (for admin commands)
+     */
+    public Map<String, SafeZone> getSafeZones() {
+        return new HashMap<>(safeZones);
+    }
+
+    // ============ CLEANUP AND UTILITY METHODS ============
+
     private void startCleanupTask() {
         new BukkitRunnable() {
             @Override
@@ -449,6 +576,13 @@ public class CombatTimer implements Listener {
      */
     public static long getCombatDuration() {
         return COMBAT_TIME;
+    }
+
+    /**
+     * Get the spawn protection duration in milliseconds
+     */
+    public static long getSpawnProtectionDuration() {
+        return SPAWN_PROTECTION_TIME;
     }
 
     /**
