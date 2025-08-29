@@ -93,7 +93,7 @@ public class CraftedMacesCommand implements CommandExecutor {
             // Show only 1/1
             return maceNameComponent
                     .append(Component.text("1/1")
-                            .color(NamedTextColor.GOLD)
+                            .color(NamedTextColor.GREEN)
                             .decoration(TextDecoration.BOLD, true));
         } else {
             // Show only 0/1

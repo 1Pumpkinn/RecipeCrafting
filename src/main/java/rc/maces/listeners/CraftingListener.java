@@ -155,8 +155,6 @@ public class CraftingListener implements Listener {
                     // Success messages
                     player.sendMessage(Component.text("✅ " + maceType.toLowerCase() + " mace crafted!")
                             .color(NamedTextColor.GREEN));
-                    player.sendMessage(Component.text("⭐ You are now the owner of the server's only " + maceType.toLowerCase() + " mace!")
-                            .color(NamedTextColor.GOLD));
 
                     // Announce to server
                     Component announcement = Component.text("🔥 " + player.getName() + " has crafted the " + maceType.toLowerCase() + " mace!")
