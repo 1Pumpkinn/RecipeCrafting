@@ -15,27 +15,28 @@ public class Main extends JavaPlugin {
     private MaceManager maceManager;
     private RecipeManager recipeManager;
     private TrustManager trustManager;
-    private CombatTimer combatTimer; // Add CombatTimer
+    private CombatTimer combatTimer;
     private PassiveEffectsListener passiveEffectsListener;
     private CraftingListener craftingListener;
     private CraftingRestrictionListener craftingRestrictionListener;
     private HeavyCoreMonitor heavyCoreMonitor;
     private MovementPreventionListener movementPreventionListener;
-    private SpawnProtectionListener spawnProtectionListener; // Add SpawnProtectionListener
-    private CombatCommandBlocker combatCommandBlocker; // Add command blocker
-    private ElytraDisabling elytraDisabling;
-
+    private SpawnProtectionListener spawnProtectionListener;
+    private CombatCommandBlocker combatCommandBlocker;
+    private ElytraDisabling elytraDisabling; // Move this after combatTimer and trustManager
 
     @Override
     public void onEnable() {
-        // Initialize managers in correct order (TrustManager before MaceManager)
+        // Initialize managers in correct order
         cooldownManager = new CooldownManager();
-        elytraDisabling = new ElytraDisabling(combatTimer, trustManager, this);
         elementManager = new ElementManager(this);
         trustManager = new TrustManager(this);
 
         // Initialize combat timer after trust manager
         combatTimer = new CombatTimer(this, trustManager);
+
+        // NOW initialize elytra disabling after both combatTimer and trustManager exist
+        elytraDisabling = new ElytraDisabling(combatTimer, trustManager, this);
 
         maceManager = new MaceManager(this, cooldownManager, trustManager);
         recipeManager = new RecipeManager(this, maceManager);
@@ -90,6 +91,9 @@ public class Main extends JavaPlugin {
         CombatCommand combatCommand = new CombatCommand(combatTimer);
         getCommand("combat").setExecutor(combatCommand);
 
+        // Register safe zone command
+        getCommand("safezone").setExecutor(new SafeZoneCommand(combatTimer));
+
         // Register event listeners
         getServer().getPluginManager().registerEvents(
                 new MaceListener(maceManager, elementManager, trustManager), this);
@@ -117,7 +121,7 @@ public class Main extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 spawnProtectionListener, this);
 
-        // Register for ElytraDisabling
+        // Register ElytraDisabling listener (CRITICAL for elytra blocking)
         getServer().getPluginManager().registerEvents(
                 elytraDisabling, this);
 
@@ -143,7 +147,7 @@ public class Main extends JavaPlugin {
             trustManager.cleanupOrphanedTrusts();
         }, 20L); // Run after 1 second delay
 
-        // NEW: Start automatic mace scanning (every 5 minutes)
+        // Start automatic mace scanning (every 5 minutes)
         getServer().getScheduler().runTaskLater(this, () -> {
             // Create a ScanMacesCommand instance to start auto-scanning
             ScanMacesCommand scanCommand = new ScanMacesCommand(craftingListener, this);
@@ -160,17 +164,15 @@ public class Main extends JavaPlugin {
         // Plugin startup messages
         getLogger().info("Maces plugin enabled!");
         getLogger().info("Registered " + recipeManager.getRecipeCount() + " custom recipes.");
-        elytraDisabling.startElytraMonitoring();
+        elytraDisabling.startElytraMonitoring(); // Start elytra monitoring
         getLogger().info("Combat timer system enabled!");
+        getLogger().info("Elytra blocking system enabled!");
     }
 
     @Override
     public void onDisable() {
         // Stop automatic scanning if running
         ScanMacesCommand.stopAutoScan();
-
-        getServer().getPluginManager().registerEvents(
-                elytraDisabling, this);
 
         if (recipeManager != null) {
             recipeManager.unregisterAllRecipes();

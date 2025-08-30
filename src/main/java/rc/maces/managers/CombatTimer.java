@@ -6,6 +6,8 @@ import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -16,6 +18,8 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -30,50 +34,62 @@ public class CombatTimer implements Listener {
     private static final long COMBAT_TIME = 15000; // 15 seconds in milliseconds
     private static final long SPAWN_PROTECTION_TIME = 10000; // 10 seconds spawn protection
 
-    // Configurable safe zones (you can modify these or load from config)
+    // Enhanced safe zone system with file persistence
     private final Map<String, SafeZone> safeZones = new HashMap<>();
+    private final File safeZoneFile;
+    private final FileConfiguration safeZoneConfig;
 
     public CombatTimer(JavaPlugin plugin, TrustManager trustManager) {
         this.plugin = plugin;
         this.trustManager = trustManager;
-        initializeSafeZones();
+
+        // Initialize safe zone file
+        this.safeZoneFile = new File(plugin.getDataFolder(), "safezones.yml");
+        this.safeZoneConfig = YamlConfiguration.loadConfiguration(safeZoneFile);
+
+        loadSafeZonesFromFile();
         startCleanupTask();
     }
 
     /**
-     * Initialize default safe zones - you can modify this or load from config
+     * Enhanced SafeZone class with more features
      */
-    private void initializeSafeZones() {
-        // Example safe zones - modify these coordinates for your server
-        // Format: world name -> SafeZone
+    public static class SafeZone {
+        private final int centerX, centerZ, radius;
+        private final String name;
+        private final long createdTime;
+        private final String createdBy;
 
-        // Spawn area example (100 block radius around 0,0)
-        safeZones.put("world", new SafeZone(0, 0, 100, "Spawn Area"));
-
-        // You can add more safe zones here:
-        // safeZones.put("world_nether", new SafeZone(0, 0, 50, "Nether Spawn"));
-        // safeZones.put("world", new SafeZone(-500, -500, 75, "Safe Town"));
-
-        plugin.getLogger().info("Loaded " + safeZones.size() + " safe zones for combat protection");
-    }
-
-    /**
-     * Safe zone data class
-     */
-    private static class SafeZone {
-        final int centerX, centerZ, radius;
-        final String name;
-
-        SafeZone(int centerX, int centerZ, int radius, String name) {
+        public SafeZone(int centerX, int centerZ, int radius, String name, String createdBy) {
             this.centerX = centerX;
             this.centerZ = centerZ;
             this.radius = radius;
             this.name = name;
+            this.createdTime = System.currentTimeMillis();
+            this.createdBy = createdBy != null ? createdBy : "System";
         }
 
-        boolean isInside(Location location) {
+        // Legacy constructor for backwards compatibility
+        public SafeZone(int centerX, int centerZ, int radius, String name) {
+            this(centerX, centerZ, radius, name, "System");
+        }
+
+        public boolean isInside(Location location) {
             double distance = Math.sqrt(Math.pow(location.getX() - centerX, 2) + Math.pow(location.getZ() - centerZ, 2));
             return distance <= radius;
+        }
+
+        // Getters
+        public int getCenterX() { return centerX; }
+        public int getCenterZ() { return centerZ; }
+        public int getRadius() { return radius; }
+        public String getName() { return name; }
+        public long getCreatedTime() { return createdTime; }
+        public String getCreatedBy() { return createdBy; }
+
+        public String getFormattedInfo() {
+            return String.format("%s (%d, %d) radius %d - created by %s",
+                    name, centerX, centerZ, radius, createdBy);
         }
     }
 
@@ -85,6 +101,43 @@ public class CombatTimer implements Listener {
 
         Player victim = (Player) event.getEntity();
         Player attacker = (Player) event.getDamager();
+
+        // Check safe zones FIRST - highest priority protection
+        if (isInSafeZone(victim.getLocation()) || isInSafeZone(attacker.getLocation())) {
+            event.setCancelled(true);
+
+            String victimZone = getSafeZoneName(victim.getLocation());
+            String attackerZone = getSafeZoneName(attacker.getLocation());
+            String zoneName = victimZone != null ? victimZone : attackerZone;
+
+            attacker.sendMessage(Component.text("🏠 PvP is disabled in " + zoneName + "!")
+                    .color(NamedTextColor.YELLOW));
+            victim.sendMessage(Component.text("🛡 You are protected by " + zoneName + "!")
+                    .color(NamedTextColor.GREEN));
+
+            plugin.getLogger().info("PvP blocked in safe zone (" + zoneName + "): " +
+                    attacker.getName() + " vs " + victim.getName());
+            return;
+        }
+
+        // Check spawn protection
+        if (hasSpawnProtection(victim) || hasSpawnProtection(attacker)) {
+            event.setCancelled(true);
+
+            if (hasSpawnProtection(victim)) {
+                attacker.sendMessage(Component.text("🛡 " + victim.getName() + " has spawn protection!")
+                        .color(NamedTextColor.YELLOW));
+                victim.sendMessage(Component.text("🛡 Your spawn protection blocked the attack!")
+                        .color(NamedTextColor.GREEN));
+            }
+
+            if (hasSpawnProtection(attacker)) {
+                attacker.sendMessage(Component.text("🛡 You cannot attack while you have spawn protection!")
+                        .color(NamedTextColor.YELLOW));
+            }
+
+            return;
+        }
 
         // Check if players are trusted allies
         if (trustManager != null && trustManager.isTrusted(victim, attacker)) {
@@ -101,12 +154,209 @@ public class CombatTimer implements Listener {
             return;
         }
 
-        // If players are not allies, put both in combat
+        // If we get here, it's valid PvP - put both players in combat
         putInCombat(victim, attacker);
         putInCombat(attacker, victim);
 
         plugin.getLogger().info("Combat initiated between " + attacker.getName() + " and " + victim.getName());
     }
+
+    // ============ ENHANCED SAFE ZONE METHODS ============
+
+    /**
+     * Load safe zones from configuration file
+     */
+    private void loadSafeZonesFromFile() {
+        try {
+            if (safeZoneFile.exists()) {
+                int loadedZones = 0;
+
+                for (String worldName : safeZoneConfig.getKeys(false)) {
+                    var zoneSection = safeZoneConfig.getConfigurationSection(worldName);
+                    if (zoneSection != null) {
+                        try {
+                            int centerX = zoneSection.getInt("centerX", 0);
+                            int centerZ = zoneSection.getInt("centerZ", 0);
+                            int radius = zoneSection.getInt("radius", 100);
+                            String name = zoneSection.getString("name", "Safe Zone");
+                            String createdBy = zoneSection.getString("createdBy", "System");
+
+                            SafeZone zone = new SafeZone(centerX, centerZ, radius, name, createdBy);
+                            safeZones.put(worldName, zone);
+                            loadedZones++;
+
+                        } catch (Exception e) {
+                            plugin.getLogger().warning("Failed to load safe zone for world " + worldName + ": " + e.getMessage());
+                        }
+                    }
+                }
+
+                plugin.getLogger().info("Loaded " + loadedZones + " safe zones from configuration file");
+            } else {
+                // Create default spawn safe zone
+                initializeDefaultSafeZones();
+                saveSafeZonesToFile();
+            }
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error loading safe zones: " + e.getMessage());
+            initializeDefaultSafeZones();
+        }
+    }
+
+    /**
+     * Save safe zones to configuration file
+     */
+    private void saveSafeZonesToFile() {
+        try {
+            // Clear existing data
+            for (String key : safeZoneConfig.getKeys(false)) {
+                safeZoneConfig.set(key, null);
+            }
+
+            // Save current safe zones
+            for (Map.Entry<String, SafeZone> entry : safeZones.entrySet()) {
+                String worldName = entry.getKey();
+                SafeZone zone = entry.getValue();
+
+                safeZoneConfig.set(worldName + ".centerX", zone.getCenterX());
+                safeZoneConfig.set(worldName + ".centerZ", zone.getCenterZ());
+                safeZoneConfig.set(worldName + ".radius", zone.getRadius());
+                safeZoneConfig.set(worldName + ".name", zone.getName());
+                safeZoneConfig.set(worldName + ".createdBy", zone.getCreatedBy());
+                safeZoneConfig.set(worldName + ".createdTime", zone.getCreatedTime());
+            }
+
+            safeZoneConfig.save(safeZoneFile);
+            plugin.getLogger().info("Saved " + safeZones.size() + " safe zones to configuration file");
+
+        } catch (IOException e) {
+            plugin.getLogger().severe("Failed to save safe zones: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Initialize default safe zones
+     */
+    private void initializeDefaultSafeZones() {
+        // Default spawn protection (modify coordinates as needed)
+        safeZones.put("world", new SafeZone(0, 0, 100, "Spawn Area", "System"));
+        plugin.getLogger().info("Created default spawn safe zone at (0, 0) with 100 block radius");
+    }
+
+    /**
+     * Add a safe zone to a world with admin tracking
+     */
+    public void addSafeZone(String worldName, int centerX, int centerZ, int radius, String name, String createdBy) {
+        SafeZone zone = new SafeZone(centerX, centerZ, radius, name, createdBy);
+        safeZones.put(worldName, zone);
+        saveSafeZonesToFile();
+
+        plugin.getLogger().info("Added safe zone: " + name + " at " + worldName +
+                " (" + centerX + ", " + centerZ + ") radius " + radius + " by " + createdBy);
+    }
+
+    /**
+     * Add safe zone with default creator
+     */
+    public void addSafeZone(String worldName, int centerX, int centerZ, int radius, String name) {
+        addSafeZone(worldName, centerX, centerZ, radius, name, "System");
+    }
+
+    /**
+     * Remove a safe zone from a world
+     */
+    public void removeSafeZone(String worldName) {
+        SafeZone removed = safeZones.remove(worldName);
+        if (removed != null) {
+            saveSafeZonesToFile();
+            plugin.getLogger().info("Removed safe zone: " + removed.getName() + " from " + worldName);
+        }
+    }
+
+    /**
+     * Check if a location is in a safe zone
+     */
+    public boolean isInSafeZone(Location location) {
+        if (location == null || location.getWorld() == null) return false;
+
+        String worldName = location.getWorld().getName();
+        SafeZone safeZone = safeZones.get(worldName);
+
+        return safeZone != null && safeZone.isInside(location);
+    }
+
+    /**
+     * Get the name of the safe zone at a location (null if not in safe zone)
+     */
+    public String getSafeZoneName(Location location) {
+        if (location == null || location.getWorld() == null) return null;
+
+        String worldName = location.getWorld().getName();
+        SafeZone safeZone = safeZones.get(worldName);
+
+        if (safeZone != null && safeZone.isInside(location)) {
+            return safeZone.getName();
+        }
+
+        return null;
+    }
+
+    /**
+     * Get safe zone details for a location
+     */
+    public SafeZone getSafeZone(Location location) {
+        if (location == null || location.getWorld() == null) return null;
+
+        String worldName = location.getWorld().getName();
+        SafeZone safeZone = safeZones.get(worldName);
+
+        if (safeZone != null && safeZone.isInside(location)) {
+            return safeZone;
+        }
+
+        return null;
+    }
+
+    /**
+     * Get safe zone for a specific world
+     */
+    public SafeZone getSafeZoneForWorld(String worldName) {
+        return safeZones.get(worldName);
+    }
+
+    /**
+     * Get all safe zones (for admin commands)
+     */
+    public Map<String, SafeZone> getSafeZones() {
+        return new HashMap<>(safeZones);
+    }
+
+    /**
+     * Get distance from nearest safe zone
+     */
+    public double getDistanceToNearestSafeZone(Location location) {
+        if (location == null || location.getWorld() == null) return Double.MAX_VALUE;
+
+        String worldName = location.getWorld().getName();
+        SafeZone safeZone = safeZones.get(worldName);
+
+        if (safeZone == null) return Double.MAX_VALUE;
+
+        double distance = Math.sqrt(Math.pow(location.getX() - safeZone.getCenterX(), 2) +
+                Math.pow(location.getZ() - safeZone.getCenterZ(), 2));
+
+        // Return distance to edge of safe zone (negative if inside)
+        return distance - safeZone.getRadius();
+    }
+
+    /**
+     * Check if a player can enter combat at their current location
+     */
+    public boolean canEnterCombatAt(Location location) {
+        return !isInSafeZone(location);
+    }
+
+    // ============ COMBAT TIMER METHODS ============
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
@@ -159,7 +409,7 @@ public class CombatTimer implements Listener {
         // Clean up tracking data
         combatPlayers.remove(player.getUniqueId());
         combatCause.remove(player.getUniqueId());
-        spawnProtection.remove(player.getUniqueId()); // Also clean up spawn protection
+        spawnProtection.remove(player.getUniqueId());
 
         // Also clean up if this player was the cause of someone else's combat
         combatCause.values().removeIf(causeUUID -> causeUUID.equals(player.getUniqueId()));
@@ -171,6 +421,12 @@ public class CombatTimer implements Listener {
 
     public void putInCombat(Player player, Player cause) {
         if (player == null || !player.isOnline()) {
+            return;
+        }
+
+        // Check if player is in a safe zone - don't put them in combat if they are
+        if (isInSafeZone(player.getLocation())) {
+            plugin.getLogger().info("Prevented combat timer for " + player.getName() + " (in safe zone)");
             return;
         }
 
@@ -252,21 +508,6 @@ public class CombatTimer implements Listener {
                         .color(NamedTextColor.GREEN));
             }
         }
-    }
-
-    /**
-     * Check if two specific players would trigger combat with each other
-     */
-    public boolean wouldTriggerCombat(Player player1, Player player2) {
-        if (player1 == null || player2 == null) {
-            return false;
-        }
-
-        if (trustManager != null && trustManager.isTrusted(player1, player2)) {
-            return false; // Trusted players don't trigger combat
-        }
-
-        return true; // Non-trusted players would trigger combat
     }
 
     /**
@@ -356,14 +597,29 @@ public class CombatTimer implements Listener {
                     .color(NamedTextColor.GRAY));
         }
 
-        // Show safe zone status
-        String safeZone = getSafeZoneName(player.getLocation());
-        if (safeZone != null) {
-            player.sendMessage(Component.text("🏠 LOCATION: " + safeZone + " (Safe Zone)")
+        // Show safe zone status with enhanced info
+        SafeZone currentZone = getSafeZone(player.getLocation());
+        if (currentZone != null) {
+            player.sendMessage(Component.text("🏠 LOCATION: " + currentZone.getName() + " (Safe Zone)")
                     .color(NamedTextColor.GREEN));
+
+            double distanceFromCenter = Math.sqrt(
+                    Math.pow(player.getLocation().getX() - currentZone.getCenterX(), 2) +
+                            Math.pow(player.getLocation().getZ() - currentZone.getCenterZ(), 2)
+            );
+            int edgeDistance = currentZone.getRadius() - (int)distanceFromCenter;
+
+            player.sendMessage(Component.text("📏 Distance to edge: " + edgeDistance + " blocks")
+                    .color(NamedTextColor.GRAY));
         } else {
             player.sendMessage(Component.text("🏠 LOCATION: PvP Zone")
                     .color(NamedTextColor.RED));
+
+            double distanceToSafeZone = getDistanceToNearestSafeZone(player.getLocation());
+            if (distanceToSafeZone != Double.MAX_VALUE && distanceToSafeZone > 0) {
+                player.sendMessage(Component.text("🛡 Nearest safe zone: " + (int)distanceToSafeZone + " blocks away")
+                        .color(NamedTextColor.GRAY));
+            }
         }
 
         player.sendMessage(Component.text("═══════════════════════════")
@@ -434,61 +690,6 @@ public class CombatTimer implements Listener {
         }
     }
 
-    // ============ SAFE ZONE METHODS ============
-
-    /**
-     * Check if a location is in a safe zone
-     */
-    public boolean isInSafeZone(Location location) {
-        if (location == null || location.getWorld() == null) return false;
-
-        String worldName = location.getWorld().getName();
-        SafeZone safeZone = safeZones.get(worldName);
-
-        return safeZone != null && safeZone.isInside(location);
-    }
-
-    /**
-     * Get the name of the safe zone at a location (null if not in safe zone)
-     */
-    public String getSafeZoneName(Location location) {
-        if (location == null || location.getWorld() == null) return null;
-
-        String worldName = location.getWorld().getName();
-        SafeZone safeZone = safeZones.get(worldName);
-
-        if (safeZone != null && safeZone.isInside(location)) {
-            return safeZone.name;
-        }
-
-        return null;
-    }
-
-    /**
-     * Add a safe zone to a world
-     */
-    public void addSafeZone(String worldName, int centerX, int centerZ, int radius, String name) {
-        safeZones.put(worldName, new SafeZone(centerX, centerZ, radius, name));
-        plugin.getLogger().info("Added safe zone: " + name + " at " + worldName + " (" + centerX + ", " + centerZ + ") radius " + radius);
-    }
-
-    /**
-     * Remove a safe zone from a world
-     */
-    public void removeSafeZone(String worldName) {
-        SafeZone removed = safeZones.remove(worldName);
-        if (removed != null) {
-            plugin.getLogger().info("Removed safe zone: " + removed.name + " from " + worldName);
-        }
-    }
-
-    /**
-     * Get all safe zones (for admin commands)
-     */
-    public Map<String, SafeZone> getSafeZones() {
-        return new HashMap<>(safeZones);
-    }
-
     // ============ CLEANUP AND UTILITY METHODS ============
 
     private void startCleanupTask() {
@@ -524,6 +725,21 @@ public class CombatTimer implements Listener {
                 });
             }
         }.runTaskTimer(plugin, 20L, 20L); // Run every second
+    }
+
+    /**
+     * Check two specific players would trigger combat with each other
+     */
+    public boolean wouldTriggerCombat(Player player1, Player player2) {
+        if (player1 == null || player2 == null) {
+            return false;
+        }
+
+        if (trustManager != null && trustManager.isTrusted(player1, player2)) {
+            return false; // Trusted players don't trigger combat
+        }
+
+        return true; // Non-trusted players would trigger combat
     }
 
     /**
@@ -591,5 +807,20 @@ public class CombatTimer implements Listener {
     public boolean isSystemHealthy() {
         // Basic health check - could be expanded
         return plugin != null && trustManager != null;
+    }
+
+    /**
+     * Create a safe zone at current location with creator tracking
+     */
+    public void addSafeZone(String worldName, int centerX, int centerZ, int radius, String name, Player creator) {
+        String createdBy = creator != null ? creator.getName() : "System";
+        addSafeZone(worldName, centerX, centerZ, radius, name, createdBy);
+    }
+
+    /**
+     * Save all safe zone data
+     */
+    public void saveAllData() {
+        saveSafeZonesToFile();
     }
 }

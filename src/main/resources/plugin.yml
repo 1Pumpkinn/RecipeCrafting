@@ -78,6 +78,14 @@ commands:
     permission: maces.combat
     permission-message: "You don't have permission to use this command!"
 
+  # Safe zone management command
+  safezone:
+    description: Manage safe zones where combat is disabled
+    usage: /safezone <create|remove|list|info|here|tp> [args...]
+    permission: maces.safezone
+    permission-message: "&cYou don't have permission to use safe zone commands!"
+    aliases: [sz, safezones, combatzone]
+
   # Trust system commands
   trust:
     description: Send a trust request to another player
@@ -163,6 +171,7 @@ permissions:
       maces.reset.others: true
       maces.security: true
       maces.trust.debug: true
+      maces.safezone.admin: true
 
   element.reroll.others:
     description: Allows rerolling other players' elements
@@ -180,6 +189,44 @@ permissions:
   # Trust debug permission
   maces.trust.debug:
     description: Allows using trust debug commands
+    default: op
+
+  # Safe zone permissions
+  maces.safezone:
+    description: Allows basic safe zone commands (info, list)
+    default: true
+    children:
+      maces.safezone.info: true
+      maces.safezone.list: true
+
+  maces.safezone.admin:
+    description: Allows creating, removing, and managing safe zones
+    default: op
+    children:
+      maces.safezone: true
+      maces.safezone.create: true
+      maces.safezone.remove: true
+      maces.safezone.tp: true
+      maces.safezone.reload: true
+
+  maces.safezone.info:
+    description: Allows checking safe zone information
+    default: true
+
+  maces.safezone.list:
+    description: Allows listing safe zones
+    default: true
+
+  maces.safezone.create:
+    description: Allows creating safe zones
+    default: op
+
+  maces.safezone.remove:
+    description: Allows removing safe zones
+    default: op
+
+  maces.safezone.tp:
+    description: Allows teleporting to safe zones
     default: op
 
   # Mace giving permissions
@@ -246,6 +293,7 @@ permissions:
       maces.use: true
       maces.craft: true
       maces.trust: true
+      maces.safezone: true
 
   maces.*:
     description: All mace-related permissions
@@ -257,3 +305,4 @@ permissions:
       maces.reset.others: true
       maces.security: true
       maces.trust.debug: true
+      maces.safezone.admin: true
