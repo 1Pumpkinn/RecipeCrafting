@@ -23,11 +23,14 @@ public class Main extends JavaPlugin {
     private MovementPreventionListener movementPreventionListener;
     private SpawnProtectionListener spawnProtectionListener; // Add SpawnProtectionListener
     private CombatCommandBlocker combatCommandBlocker; // Add command blocker
+    private ElytraDisabling elytraDisabling;
+
 
     @Override
     public void onEnable() {
         // Initialize managers in correct order (TrustManager before MaceManager)
         cooldownManager = new CooldownManager();
+        elytraDisabling = new ElytraDisabling(combatTimer, trustManager);
         elementManager = new ElementManager(this);
         trustManager = new TrustManager(this);
 
@@ -161,6 +164,9 @@ public class Main extends JavaPlugin {
         // Stop automatic scanning if running
         ScanMacesCommand.stopAutoScan();
 
+        getServer().getPluginManager().registerEvents(
+                elytraDisabling, this);
+
         if (recipeManager != null) {
             recipeManager.unregisterAllRecipes();
         }
@@ -174,6 +180,7 @@ public class Main extends JavaPlugin {
         if (craftingListener != null) {
             craftingListener.onDisable();
         }
+
         getLogger().info("Maces plugin disabled!");
     }
 
@@ -204,6 +211,10 @@ public class Main extends JavaPlugin {
 
     public PassiveEffectsListener getPassiveEffectsListener() {
         return passiveEffectsListener;
+    }
+
+    public ElytraDisabling getElytraDisabling() {
+        return elytraDisabling;
     }
 
     public CraftingListener getCraftingListener() {
