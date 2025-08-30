@@ -14,15 +14,23 @@ import rc.maces.managers.CombatTimer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Command to manage safe zones where combat cannot occur
- * Usage: /safezone <create|remove|list|info|tp> [args...]
+ * Usage: /safezone <pos1|pos2|create|remove|list|info|tp> [args...]
+ * Uses WorldEdit-style position selection system
  */
 public class SafeZoneCommand implements CommandExecutor, TabCompleter {
 
     private final CombatTimer combatTimer;
+
+    // Store player selections (pos1 and pos2)
+    private final Map<UUID, Location> pos1Selections = new HashMap<>();
+    private final Map<UUID, Location> pos2Selections = new HashMap<>();
 
     public SafeZoneCommand(CombatTimer combatTimer) {
         this.combatTimer = combatTimer;
@@ -45,6 +53,16 @@ public class SafeZoneCommand implements CommandExecutor, TabCompleter {
         String subCommand = args[0].toLowerCase();
 
         switch (subCommand) {
+            case "pos1":
+            case "p1":
+            case "1":
+                return handlePos1(player);
+
+            case "pos2":
+            case "p2":
+            case "2":
+                return handlePos2(player);
+
             case "create":
             case "add":
             case "new":
@@ -67,8 +85,9 @@ public class SafeZoneCommand implements CommandExecutor, TabCompleter {
             case "teleport":
                 return handleTeleport(player, args);
 
-            case "here":
-                return handleHere(player, args);
+            case "clear":
+            case "reset":
+                return handleClear(player);
 
             case "reload":
                 return handleReload(player);
@@ -82,9 +101,117 @@ public class SafeZoneCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * Create a new safe zone
-     * /safezone create <name> [radius] [centerX] [centerZ]
-     * /safezone create <name> [radius] (uses current location)
+     * Set position 1 at current location
+     */
+    private boolean handlePos1(Player player) {
+        if (!player.hasPermission("maces.admin")) {
+            player.sendMessage(Component.text("❌ You need admin permission to set safe zone positions!")
+                    .color(NamedTextColor.RED));
+            return true;
+        }
+
+        Location loc = player.getLocation();
+        pos1Selections.put(player.getUniqueId(), loc.clone());
+
+        player.sendMessage(Component.text("✅ Position 1 set!")
+                .color(NamedTextColor.GREEN));
+        player.sendMessage(Component.text("📍 Pos1: " + loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ())
+                .color(NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("🌍 World: " + loc.getWorld().getName())
+                .color(NamedTextColor.GRAY));
+
+        // Check if we have pos2 and show selection info
+        Location pos2 = pos2Selections.get(player.getUniqueId());
+        if (pos2 != null && pos2.getWorld().equals(loc.getWorld())) {
+            showSelectionInfo(player);
+        } else {
+            player.sendMessage(Component.text("💡 Now set position 2 with '/safezone pos2'")
+                    .color(NamedTextColor.GRAY));
+        }
+
+        return true;
+    }
+
+    /**
+     * Set position 2 at current location
+     */
+    private boolean handlePos2(Player player) {
+        if (!player.hasPermission("maces.admin")) {
+            player.sendMessage(Component.text("❌ You need admin permission to set safe zone positions!")
+                    .color(NamedTextColor.RED));
+            return true;
+        }
+
+        Location loc = player.getLocation();
+        pos2Selections.put(player.getUniqueId(), loc.clone());
+
+        player.sendMessage(Component.text("✅ Position 2 set!")
+                .color(NamedTextColor.GREEN));
+        player.sendMessage(Component.text("📍 Pos2: " + loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ())
+                .color(NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("🌍 World: " + loc.getWorld().getName())
+                .color(NamedTextColor.GRAY));
+
+        // Check if we have pos1 and show selection info
+        Location pos1 = pos1Selections.get(player.getUniqueId());
+        if (pos1 != null && pos1.getWorld().equals(loc.getWorld())) {
+            showSelectionInfo(player);
+        } else {
+            player.sendMessage(Component.text("💡 Now set position 1 with '/safezone pos1'")
+                    .color(NamedTextColor.GRAY));
+        }
+
+        return true;
+    }
+
+    /**
+     * Show current selection info
+     */
+    private void showSelectionInfo(Player player) {
+        Location pos1 = pos1Selections.get(player.getUniqueId());
+        Location pos2 = pos2Selections.get(player.getUniqueId());
+
+        if (pos1 == null || pos2 == null) {
+            return;
+        }
+
+        if (!pos1.getWorld().equals(pos2.getWorld())) {
+            player.sendMessage(Component.text("⚠ Positions are in different worlds!")
+                    .color(NamedTextColor.RED));
+            return;
+        }
+
+        // Calculate selection bounds
+        int minX = Math.min(pos1.getBlockX(), pos2.getBlockX());
+        int maxX = Math.max(pos1.getBlockX(), pos2.getBlockX());
+        int minY = Math.min(pos1.getBlockY(), pos2.getBlockY());
+        int maxY = Math.max(pos1.getBlockY(), pos2.getBlockY());
+        int minZ = Math.min(pos1.getBlockZ(), pos2.getBlockZ());
+        int maxZ = Math.max(pos1.getBlockZ(), pos2.getBlockZ());
+
+        int sizeX = maxX - minX + 1;
+        int sizeY = maxY - minY + 1;
+        int sizeZ = maxZ - minZ + 1;
+        int totalBlocks = sizeX * sizeY * sizeZ;
+
+        player.sendMessage(Component.text("═══════ SELECTION INFO ═══════")
+                .color(NamedTextColor.GOLD));
+        player.sendMessage(Component.text("📐 Size: " + sizeX + " × " + sizeY + " × " + sizeZ + " (" + totalBlocks + " blocks)")
+                .color(NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("📍 From: " + minX + ", " + minY + ", " + minZ)
+                .color(NamedTextColor.WHITE));
+        player.sendMessage(Component.text("📍 To: " + maxX + ", " + maxY + ", " + maxZ)
+                .color(NamedTextColor.WHITE));
+        player.sendMessage(Component.text("🌍 World: " + pos1.getWorld().getName())
+                .color(NamedTextColor.GRAY));
+        player.sendMessage(Component.text(""));
+        player.sendMessage(Component.text("✅ Ready to create! Use '/safezone create <name>'")
+                .color(NamedTextColor.GREEN));
+    }
+
+    /**
+     * Create a new safe zone using selected positions
+     * /safezone create <name>
      */
     private boolean handleCreate(Player player, String[] args) {
         if (!player.hasPermission("maces.admin")) {
@@ -94,49 +221,36 @@ public class SafeZoneCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length < 2) {
-            player.sendMessage(Component.text("❌ Usage: /safezone create <name> [radius] [centerX] [centerZ]")
+            player.sendMessage(Component.text("❌ Usage: /safezone create <name>")
                     .color(NamedTextColor.RED));
+            player.sendMessage(Component.text("💡 First set pos1 and pos2, then create!")
+                    .color(NamedTextColor.GRAY));
             return true;
         }
 
         String name = args[1];
-        int radius = 100; // Default radius
-        Location location = player.getLocation();
-        int centerX = location.getBlockX();
-        int centerZ = location.getBlockZ();
+        Location pos1 = pos1Selections.get(player.getUniqueId());
+        Location pos2 = pos2Selections.get(player.getUniqueId());
 
-        try {
-            // Parse radius if provided
-            if (args.length >= 3) {
-                radius = Integer.parseInt(args[2]);
-                if (radius <= 0) {
-                    player.sendMessage(Component.text("❌ Radius must be positive!")
-                            .color(NamedTextColor.RED));
-                    return true;
-                }
-                if (radius > 1000) {
-                    player.sendMessage(Component.text("❌ Radius cannot exceed 1000 blocks!")
-                            .color(NamedTextColor.RED));
-                    return true;
-                }
-            }
+        // Validate positions
+        if (pos1 == null || pos2 == null) {
+            player.sendMessage(Component.text("❌ You must set both pos1 and pos2 first!")
+                    .color(NamedTextColor.RED));
+            player.sendMessage(Component.text("💡 Use '/safezone pos1' and '/safezone pos2'")
+                    .color(NamedTextColor.GRAY));
+            return true;
+        }
 
-            // Parse coordinates if provided
-            if (args.length >= 5) {
-                centerX = Integer.parseInt(args[3]);
-                centerZ = Integer.parseInt(args[4]);
-            }
-
-        } catch (NumberFormatException e) {
-            player.sendMessage(Component.text("❌ Invalid number format!")
+        if (!pos1.getWorld().equals(pos2.getWorld())) {
+            player.sendMessage(Component.text("❌ Both positions must be in the same world!")
                     .color(NamedTextColor.RED));
             return true;
         }
 
-        String worldName = location.getWorld().getName();
+        String worldName = pos1.getWorld().getName();
 
         // Check if safe zone already exists for this world
-        if (combatTimer.getSafeZoneName(location) != null) {
+        if (combatTimer.getSafeZoneForWorld(worldName) != null) {
             player.sendMessage(Component.text("❌ A safe zone already exists in this world!")
                     .color(NamedTextColor.RED));
             player.sendMessage(Component.text("Use '/safezone remove' first, then create a new one.")
@@ -144,8 +258,30 @@ public class SafeZoneCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        // Calculate bounds
+        int minX = Math.min(pos1.getBlockX(), pos2.getBlockX());
+        int maxX = Math.max(pos1.getBlockX(), pos2.getBlockX());
+        int minY = Math.min(pos1.getBlockY(), pos2.getBlockY());
+        int maxY = Math.max(pos1.getBlockY(), pos2.getBlockY());
+        int minZ = Math.min(pos1.getBlockZ(), pos2.getBlockZ());
+        int maxZ = Math.max(pos1.getBlockZ(), pos2.getBlockZ());
+
+        // Validate size (prevent massive safe zones that could lag server)
+        int sizeX = maxX - minX + 1;
+        int sizeY = maxY - minY + 1;
+        int sizeZ = maxZ - minZ + 1;
+        long totalBlocks = (long)sizeX * sizeY * sizeZ;
+
+        if (totalBlocks > 10_000_000) { // 10 million blocks max
+            player.sendMessage(Component.text("❌ Safe zone is too large! Maximum 10 million blocks.")
+                    .color(NamedTextColor.RED));
+            player.sendMessage(Component.text("Current size: " + totalBlocks + " blocks")
+                    .color(NamedTextColor.YELLOW));
+            return true;
+        }
+
         // Create the safe zone
-        combatTimer.addSafeZone(worldName, centerX, centerZ, radius, name, player);
+        combatTimer.addSafeZone(worldName, minX, minY, minZ, maxX, maxY, maxZ, name, player);
 
         // Send success message
         player.sendMessage(Component.text("═══════════════════════════════")
@@ -159,68 +295,19 @@ public class SafeZoneCommand implements CommandExecutor, TabCompleter {
                 .color(NamedTextColor.YELLOW));
         player.sendMessage(Component.text("🌍 World: " + worldName)
                 .color(NamedTextColor.YELLOW));
-        player.sendMessage(Component.text("📍 Center: " + centerX + ", " + centerZ)
+        player.sendMessage(Component.text("📍 From: " + minX + ", " + minY + ", " + minZ)
                 .color(NamedTextColor.YELLOW));
-        player.sendMessage(Component.text("📏 Radius: " + radius + " blocks")
+        player.sendMessage(Component.text("📍 To: " + maxX + ", " + maxY + ", " + maxZ)
+                .color(NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("📐 Size: " + sizeX + " × " + sizeY + " × " + sizeZ + " (" + totalBlocks + " blocks)")
                 .color(NamedTextColor.YELLOW));
         player.sendMessage(Component.text(""));
         player.sendMessage(Component.text("⚔ Combat is now disabled in this area!")
                 .color(NamedTextColor.GREEN));
 
-        return true;
-    }
-
-    /**
-     * Create a safe zone at current location
-     * /safezone here <name> [radius]
-     */
-    private boolean handleHere(Player player, String[] args) {
-        if (!player.hasPermission("maces.admin")) {
-            player.sendMessage(Component.text("❌ You need admin permission to create safe zones!")
-                    .color(NamedTextColor.RED));
-            return true;
-        }
-
-        if (args.length < 2) {
-            player.sendMessage(Component.text("❌ Usage: /safezone here <name> [radius]")
-                    .color(NamedTextColor.RED));
-            return true;
-        }
-
-        String name = args[1];
-        int radius = 100; // Default radius
-
-        if (args.length >= 3) {
-            try {
-                radius = Integer.parseInt(args[2]);
-                if (radius <= 0 || radius > 1000) {
-                    player.sendMessage(Component.text("❌ Radius must be between 1 and 1000 blocks!")
-                            .color(NamedTextColor.RED));
-                    return true;
-                }
-            } catch (NumberFormatException e) {
-                player.sendMessage(Component.text("❌ Invalid radius number!")
-                        .color(NamedTextColor.RED));
-                return true;
-            }
-        }
-
-        Location loc = player.getLocation();
-        String worldName = loc.getWorld().getName();
-
-        // Check if safe zone already exists
-        if (combatTimer.getSafeZoneName(loc) != null) {
-            player.sendMessage(Component.text("❌ A safe zone already exists in this world!")
-                    .color(NamedTextColor.RED));
-            return true;
-        }
-
-        combatTimer.addSafeZone(worldName, loc.getBlockX(), loc.getBlockZ(), radius, name, player);
-
-        player.sendMessage(Component.text("✅ Safe zone '" + name + "' created at your location!")
-                .color(NamedTextColor.GREEN));
-        player.sendMessage(Component.text("📏 Radius: " + radius + " blocks")
-                .color(NamedTextColor.YELLOW));
+        // Clear selections after successful creation
+        pos1Selections.remove(player.getUniqueId());
+        pos2Selections.remove(player.getUniqueId());
 
         return true;
     }
@@ -244,16 +331,17 @@ public class SafeZoneCommand implements CommandExecutor, TabCompleter {
         }
 
         // Check if safe zone exists
-        String existingName = combatTimer.getSafeZoneName(player.getLocation());
-        if (existingName == null && args.length < 2) {
-            player.sendMessage(Component.text("❌ No safe zone found in current world!")
+        var existingSafeZone = combatTimer.getSafeZoneForWorld(worldName);
+        if (existingSafeZone == null) {
+            player.sendMessage(Component.text("❌ No safe zone found in world: " + worldName)
                     .color(NamedTextColor.RED));
             return true;
         }
 
+        String zoneName = existingSafeZone.getName();
         combatTimer.removeSafeZone(worldName);
 
-        player.sendMessage(Component.text("✅ Safe zone removed from world: " + worldName)
+        player.sendMessage(Component.text("✅ Safe zone '" + zoneName + "' removed from world: " + worldName)
                 .color(NamedTextColor.GREEN));
 
         return true;
@@ -284,9 +372,11 @@ public class SafeZoneCommand implements CommandExecutor, TabCompleter {
                     .decoration(TextDecoration.BOLD, true));
             player.sendMessage(Component.text("   🌍 World: " + worldName)
                     .color(NamedTextColor.WHITE));
-            player.sendMessage(Component.text("   📍 Center: " + zone.getCenterX() + ", " + zone.getCenterZ())
+            player.sendMessage(Component.text("   📍 From: " + zone.getMinX() + ", " + zone.getMinY() + ", " + zone.getMinZ())
                     .color(NamedTextColor.WHITE));
-            player.sendMessage(Component.text("   📏 Radius: " + zone.getRadius() + " blocks")
+            player.sendMessage(Component.text("   📍 To: " + zone.getMaxX() + ", " + zone.getMaxY() + ", " + zone.getMaxZ())
+                    .color(NamedTextColor.WHITE));
+            player.sendMessage(Component.text("   📐 Size: " + zone.getSizeX() + " × " + zone.getSizeY() + " × " + zone.getSizeZ())
                     .color(NamedTextColor.WHITE));
             player.sendMessage(Component.text("   👤 Created by: " + zone.getCreatedBy())
                     .color(NamedTextColor.GRAY));
@@ -306,7 +396,7 @@ public class SafeZoneCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * Show info about current location or specific safe zone
+     * Show info about current location or selections
      */
     private boolean handleInfo(Player player, String[] args) {
         Location location = player.getLocation();
@@ -323,24 +413,14 @@ public class SafeZoneCommand implements CommandExecutor, TabCompleter {
             player.sendMessage(Component.text("🏠 Safe Zone: " + currentZone.getName())
                     .color(NamedTextColor.GREEN)
                     .decoration(TextDecoration.BOLD, true));
-            player.sendMessage(Component.text("📍 Zone Center: " + currentZone.getCenterX() + ", " + currentZone.getCenterZ())
+            player.sendMessage(Component.text("📍 Zone From: " + currentZone.getMinX() + ", " + currentZone.getMinY() + ", " + currentZone.getMinZ())
                     .color(NamedTextColor.WHITE));
-            player.sendMessage(Component.text("📏 Zone Radius: " + currentZone.getRadius() + " blocks")
+            player.sendMessage(Component.text("📍 Zone To: " + currentZone.getMaxX() + ", " + currentZone.getMaxY() + ", " + currentZone.getMaxZ())
+                    .color(NamedTextColor.WHITE));
+            player.sendMessage(Component.text("📐 Zone Size: " + currentZone.getSizeX() + " × " + currentZone.getSizeY() + " × " + currentZone.getSizeZ())
                     .color(NamedTextColor.WHITE));
             player.sendMessage(Component.text("👤 Created by: " + currentZone.getCreatedBy())
                     .color(NamedTextColor.GRAY));
-
-            // Calculate distance from center and to edge
-            double distanceFromCenter = Math.sqrt(
-                    Math.pow(location.getX() - currentZone.getCenterX(), 2) +
-                            Math.pow(location.getZ() - currentZone.getCenterZ(), 2)
-            );
-            int edgeDistance = currentZone.getRadius() - (int)distanceFromCenter;
-
-            player.sendMessage(Component.text("📏 Distance from center: " + (int)distanceFromCenter + " blocks")
-                    .color(NamedTextColor.WHITE));
-            player.sendMessage(Component.text("📏 Distance to edge: " + edgeDistance + " blocks")
-                    .color(NamedTextColor.WHITE));
             player.sendMessage(Component.text("⚔ Combat Status: PROTECTED")
                     .color(NamedTextColor.GREEN)
                     .decoration(TextDecoration.BOLD, true));
@@ -350,12 +430,39 @@ public class SafeZoneCommand implements CommandExecutor, TabCompleter {
             player.sendMessage(Component.text("⚔ Combat Status: PVP ZONE")
                     .color(NamedTextColor.RED)
                     .decoration(TextDecoration.BOLD, true));
+        }
 
-            // Show distance to nearest safe zone
-            double distanceToSafeZone = combatTimer.getDistanceToNearestSafeZone(location);
-            if (distanceToSafeZone != Double.MAX_VALUE && distanceToSafeZone > 0) {
-                player.sendMessage(Component.text("🛡 Nearest safe zone: " + (int)distanceToSafeZone + " blocks away")
+        // Show current selections if admin
+        if (player.hasPermission("maces.admin")) {
+            player.sendMessage(Component.text(""));
+            player.sendMessage(Component.text("📋 Your Selections:")
+                    .color(NamedTextColor.AQUA));
+
+            Location pos1 = pos1Selections.get(player.getUniqueId());
+            Location pos2 = pos2Selections.get(player.getUniqueId());
+
+            if (pos1 != null) {
+                player.sendMessage(Component.text("   Pos1: " + pos1.getBlockX() + ", " + pos1.getBlockY() + ", " + pos1.getBlockZ())
+                        .color(NamedTextColor.WHITE));
+            } else {
+                player.sendMessage(Component.text("   Pos1: Not set")
                         .color(NamedTextColor.GRAY));
+            }
+
+            if (pos2 != null) {
+                player.sendMessage(Component.text("   Pos2: " + pos2.getBlockX() + ", " + pos2.getBlockY() + ", " + pos2.getBlockZ())
+                        .color(NamedTextColor.WHITE));
+            } else {
+                player.sendMessage(Component.text("   Pos2: Not set")
+                        .color(NamedTextColor.GRAY));
+            }
+
+            if (pos1 != null && pos2 != null && pos1.getWorld().equals(pos2.getWorld())) {
+                player.sendMessage(Component.text("   Status: Ready to create!")
+                        .color(NamedTextColor.GREEN));
+            } else {
+                player.sendMessage(Component.text("   Status: Need both positions")
+                        .color(NamedTextColor.YELLOW));
             }
         }
 
@@ -389,7 +496,7 @@ public class SafeZoneCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // Get the world and create location
+        // Get the world and create location at center of safe zone
         org.bukkit.World world = Bukkit.getWorld(worldName);
         if (world == null) {
             player.sendMessage(Component.text("❌ World not found: " + worldName)
@@ -397,14 +504,49 @@ public class SafeZoneCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // Find a safe Y coordinate at the center
-        Location centerLoc = new Location(world, zone.getCenterX() + 0.5, 100, zone.getCenterZ() + 0.5);
-        Location safeLoc = world.getHighestBlockAt(centerLoc).getLocation().add(0, 1, 0);
+        // Calculate center coordinates
+        int centerX = (zone.getMinX() + zone.getMaxX()) / 2;
+        int centerY = (zone.getMinY() + zone.getMaxY()) / 2;
+        int centerZ = (zone.getMinZ() + zone.getMaxZ()) / 2;
+
+        Location teleportLoc = new Location(world, centerX + 0.5, centerY, centerZ + 0.5);
+
+        // Make sure it's a safe location (not inside blocks)
+        while (world.getBlockAt(teleportLoc).getType().isSolid() && centerY < zone.getMaxY()) {
+            centerY++;
+            teleportLoc.setY(centerY);
+        }
 
         // Teleport player
-        player.teleport(safeLoc);
+        player.teleport(teleportLoc);
         player.sendMessage(Component.text("✅ Teleported to " + zone.getName() + " center!")
                 .color(NamedTextColor.GREEN));
+        player.sendMessage(Component.text("📍 Center: " + centerX + ", " + centerY + ", " + centerZ)
+                .color(NamedTextColor.GRAY));
+
+        return true;
+    }
+
+    /**
+     * Clear current selections
+     */
+    private boolean handleClear(Player player) {
+        if (!player.hasPermission("maces.admin")) {
+            player.sendMessage(Component.text("❌ You need admin permission to clear selections!")
+                    .color(NamedTextColor.RED));
+            return true;
+        }
+
+        boolean hadSelections = pos1Selections.remove(player.getUniqueId()) != null ||
+                pos2Selections.remove(player.getUniqueId()) != null;
+
+        if (hadSelections) {
+            player.sendMessage(Component.text("✅ Position selections cleared!")
+                    .color(NamedTextColor.GREEN));
+        } else {
+            player.sendMessage(Component.text("💡 No selections to clear.")
+                    .color(NamedTextColor.GRAY));
+        }
 
         return true;
     }
@@ -419,8 +561,6 @@ public class SafeZoneCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // This would trigger a reload from the CombatTimer
-        // For now, just show current status
         var safeZones = combatTimer.getSafeZones();
         player.sendMessage(Component.text("✅ Safe zone system status checked!")
                 .color(NamedTextColor.GREEN));
@@ -438,23 +578,37 @@ public class SafeZoneCommand implements CommandExecutor, TabCompleter {
                 .color(NamedTextColor.GOLD));
         player.sendMessage(Component.text("🏠 Safe zones prevent all combat and PvP!")
                 .color(NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("📐 Uses WorldEdit-style position selection!")
+                .color(NamedTextColor.YELLOW));
         player.sendMessage(Component.text(""));
 
         if (player.hasPermission("maces.admin")) {
             player.sendMessage(Component.text("👑 Admin Commands:")
                     .color(NamedTextColor.AQUA)
                     .decoration(TextDecoration.BOLD, true));
-            player.sendMessage(Component.text("• /safezone create <name> [radius] [x] [z]")
+            player.sendMessage(Component.text("• /safezone pos1")
                     .color(NamedTextColor.WHITE));
-            player.sendMessage(Component.text("  Create a safe zone (default radius: 100)")
+            player.sendMessage(Component.text("  Set position 1 at your location")
                     .color(NamedTextColor.GRAY));
-            player.sendMessage(Component.text("• /safezone here <name> [radius]")
+            player.sendMessage(Component.text("• /safezone pos2")
                     .color(NamedTextColor.WHITE));
-            player.sendMessage(Component.text("  Create a safe zone at your location")
+            player.sendMessage(Component.text("  Set position 2 at your location")
+                    .color(NamedTextColor.GRAY));
+            player.sendMessage(Component.text("• /safezone create <name>")
+                    .color(NamedTextColor.WHITE));
+            player.sendMessage(Component.text("  Create safe zone from pos1 to pos2")
                     .color(NamedTextColor.GRAY));
             player.sendMessage(Component.text("• /safezone remove [world]")
                     .color(NamedTextColor.WHITE));
             player.sendMessage(Component.text("  Remove safe zone from world")
+                    .color(NamedTextColor.GRAY));
+            player.sendMessage(Component.text("• /safezone clear")
+                    .color(NamedTextColor.WHITE));
+            player.sendMessage(Component.text("  Clear your position selections")
+                    .color(NamedTextColor.GRAY));
+            player.sendMessage(Component.text("• /safezone tp [world]")
+                    .color(NamedTextColor.WHITE));
+            player.sendMessage(Component.text("  Teleport to safe zone center")
                     .color(NamedTextColor.GRAY));
             player.sendMessage(Component.text(""));
         }
@@ -468,13 +622,23 @@ public class SafeZoneCommand implements CommandExecutor, TabCompleter {
                 .color(NamedTextColor.GRAY));
         player.sendMessage(Component.text("• /safezone info")
                 .color(NamedTextColor.WHITE));
-        player.sendMessage(Component.text("  Check current location safety")
+        player.sendMessage(Component.text("  Check current location and selections")
                 .color(NamedTextColor.GRAY));
 
         player.sendMessage(Component.text(""));
-        player.sendMessage(Component.text("💡 Safe zones protect against:")
+        player.sendMessage(Component.text("💡 Quick Setup Guide:")
+                .color(NamedTextColor.AQUA));
+        player.sendMessage(Component.text("  1. Go to first corner → /safezone pos1")
+                .color(NamedTextColor.GRAY));
+        player.sendMessage(Component.text("  2. Go to opposite corner → /safezone pos2")
+                .color(NamedTextColor.GRAY));
+        player.sendMessage(Component.text("  3. Create the zone → /safezone create MyBase")
+                .color(NamedTextColor.GRAY));
+
+        player.sendMessage(Component.text(""));
+        player.sendMessage(Component.text("🛡 Safe zones protect against:")
                 .color(NamedTextColor.YELLOW));
-        player.sendMessage(Component.text("  • All PvP damage")
+        player.sendMessage(Component.text("  • All PvP damage in the selected area")
                 .color(NamedTextColor.GRAY));
         player.sendMessage(Component.text("  • Mace abilities")
                 .color(NamedTextColor.GRAY));
@@ -488,9 +652,9 @@ public class SafeZoneCommand implements CommandExecutor, TabCompleter {
 
         if (args.length == 1) {
             // Main subcommands
-            List<String> subCommands = Arrays.asList("create", "remove", "list", "info", "here");
+            List<String> subCommands = Arrays.asList("pos1", "pos2", "create", "remove", "list", "info", "clear");
             if (sender.hasPermission("maces.admin")) {
-                subCommands = Arrays.asList("create", "remove", "list", "info", "here", "tp", "reload");
+                subCommands = Arrays.asList("pos1", "pos2", "create", "remove", "list", "info", "clear", "tp", "reload");
             }
 
             for (String subCmd : subCommands) {
@@ -502,24 +666,17 @@ public class SafeZoneCommand implements CommandExecutor, TabCompleter {
         else if (args.length == 2) {
             String subCommand = args[0].toLowerCase();
 
-            if (subCommand.equals("remove")) {
-                // Could add world name completions here
-                completions.add("world");
-                completions.add("world_nether");
-                completions.add("world_the_end");
+            if (subCommand.equals("remove") || subCommand.equals("tp")) {
+                // Add world name completions
+                var safeZones = combatTimer.getSafeZones();
+                for (String worldName : safeZones.keySet()) {
+                    if (worldName.toLowerCase().startsWith(args[1].toLowerCase())) {
+                        completions.add(worldName);
+                    }
+                }
             }
-            else if (subCommand.equals("create") || subCommand.equals("here")) {
+            else if (subCommand.equals("create")) {
                 completions.add("<name>");
-            }
-        }
-        else if (args.length == 3) {
-            String subCommand = args[0].toLowerCase();
-
-            if (subCommand.equals("create") || subCommand.equals("here")) {
-                completions.add("[radius]");
-                completions.add("50");
-                completions.add("100");
-                completions.add("200");
             }
         }
 

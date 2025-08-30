@@ -34,7 +34,7 @@ public class CombatTimer implements Listener {
     private static final long COMBAT_TIME = 15000; // 15 seconds in milliseconds
     private static final long SPAWN_PROTECTION_TIME = 10000; // 10 seconds spawn protection
 
-    // Enhanced safe zone system with file persistence
+    // Enhanced safe zone system with cuboid support
     private final Map<String, SafeZone> safeZones = new HashMap<>();
     private final File safeZoneFile;
     private final FileConfiguration safeZoneConfig;
@@ -52,44 +52,117 @@ public class CombatTimer implements Listener {
     }
 
     /**
-     * Enhanced SafeZone class with more features
+     * Enhanced SafeZone class that supports cuboid regions (pos1 to pos2)
      */
     public static class SafeZone {
-        private final int centerX, centerZ, radius;
+        private final int minX, minY, minZ;
+        private final int maxX, maxY, maxZ;
         private final String name;
         private final long createdTime;
         private final String createdBy;
 
-        public SafeZone(int centerX, int centerZ, int radius, String name, String createdBy) {
-            this.centerX = centerX;
-            this.centerZ = centerZ;
-            this.radius = radius;
+        public SafeZone(int minX, int minY, int minZ, int maxX, int maxY, int maxZ, String name, String createdBy) {
+            // Ensure min/max are correct
+            this.minX = Math.min(minX, maxX);
+            this.maxX = Math.max(minX, maxX);
+            this.minY = Math.min(minY, maxY);
+            this.maxY = Math.max(minY, maxY);
+            this.minZ = Math.min(minZ, maxZ);
+            this.maxZ = Math.max(minZ, maxZ);
             this.name = name;
             this.createdTime = System.currentTimeMillis();
             this.createdBy = createdBy != null ? createdBy : "System";
         }
 
-        // Legacy constructor for backwards compatibility
-        public SafeZone(int centerX, int centerZ, int radius, String name) {
-            this(centerX, centerZ, radius, name, "System");
+        // Legacy constructor for backwards compatibility (circular to cuboid conversion)
+        public SafeZone(int centerX, int centerZ, int radius, String name, String createdBy) {
+            this(centerX - radius, -64, centerZ - radius,
+                    centerX + radius, 320, centerZ + radius, name, createdBy);
         }
 
+        /**
+         * Check if a location is inside this cuboid safe zone
+         */
         public boolean isInside(Location location) {
-            double distance = Math.sqrt(Math.pow(location.getX() - centerX, 2) + Math.pow(location.getZ() - centerZ, 2));
-            return distance <= radius;
+            if (location == null || location.getWorld() == null) {
+                return false;
+            }
+
+            int x = location.getBlockX();
+            int y = location.getBlockY();
+            int z = location.getBlockZ();
+
+            return x >= minX && x <= maxX &&
+                    y >= minY && y <= maxY &&
+                    z >= minZ && z <= maxZ;
         }
 
-        // Getters
-        public int getCenterX() { return centerX; }
-        public int getCenterZ() { return centerZ; }
-        public int getRadius() { return radius; }
+        /**
+         * Get the closest distance to the edge of the safe zone
+         */
+        public double getDistanceToEdge(Location location) {
+            if (location == null) return Double.MAX_VALUE;
+            if (isInside(location)) return -1; // Inside the zone
+
+            int x = location.getBlockX();
+            int y = location.getBlockY();
+            int z = location.getBlockZ();
+
+            // Calculate distance to the closest face of the cuboid
+            double dx = Math.max(0, Math.max(minX - x, x - maxX));
+            double dy = Math.max(0, Math.max(minY - y, y - maxY));
+            double dz = Math.max(0, Math.max(minZ - z, z - maxZ));
+
+            return Math.sqrt(dx * dx + dy * dy + dz * dz);
+        }
+
+        /**
+         * Get center coordinates of the safe zone
+         */
+        public int getCenterX() { return (minX + maxX) / 2; }
+        public int getCenterY() { return (minY + maxY) / 2; }
+        public int getCenterZ() { return (minZ + maxZ) / 2; }
+
+        // Getters for bounds
+        public int getMinX() { return minX; }
+        public int getMinY() { return minY; }
+        public int getMinZ() { return minZ; }
+        public int getMaxX() { return maxX; }
+        public int getMaxY() { return maxY; }
+        public int getMaxZ() { return maxZ; }
+
+        // Size getters
+        public int getSizeX() { return maxX - minX + 1; }
+        public int getSizeY() { return maxY - minY + 1; }
+        public int getSizeZ() { return maxZ - minZ + 1; }
+        public long getTotalBlocks() { return (long)getSizeX() * getSizeY() * getSizeZ(); }
+
+        // Info getters
         public String getName() { return name; }
         public long getCreatedTime() { return createdTime; }
         public String getCreatedBy() { return createdBy; }
 
         public String getFormattedInfo() {
-            return String.format("%s (%d, %d) radius %d - created by %s",
-                    name, centerX, centerZ, radius, createdBy);
+            return String.format("%s [%d,%d,%d to %d,%d,%d] - created by %s",
+                    name, minX, minY, minZ, maxX, maxY, maxZ, createdBy);
+        }
+
+        /**
+         * Get coordinates as a formatted string
+         */
+        public String getCoordinatesString() {
+            return String.format("From: %d, %d, %d  To: %d, %d, %d",
+                    minX, minY, minZ, maxX, maxY, maxZ);
+        }
+
+        /**
+         * Check if this safe zone overlaps with another cuboid
+         */
+        public boolean overlaps(int otherMinX, int otherMinY, int otherMinZ,
+                                int otherMaxX, int otherMaxY, int otherMaxZ) {
+            return !(maxX < otherMinX || minX > otherMaxX ||
+                    maxY < otherMinY || minY > otherMaxY ||
+                    maxZ < otherMinZ || minZ > otherMaxZ);
         }
     }
 
@@ -164,7 +237,7 @@ public class CombatTimer implements Listener {
     // ============ ENHANCED SAFE ZONE METHODS ============
 
     /**
-     * Load safe zones from configuration file
+     * Load safe zones from configuration file (now supports cuboid format)
      */
     private void loadSafeZonesFromFile() {
         try {
@@ -175,15 +248,38 @@ public class CombatTimer implements Listener {
                     var zoneSection = safeZoneConfig.getConfigurationSection(worldName);
                     if (zoneSection != null) {
                         try {
-                            int centerX = zoneSection.getInt("centerX", 0);
-                            int centerZ = zoneSection.getInt("centerZ", 0);
-                            int radius = zoneSection.getInt("radius", 100);
-                            String name = zoneSection.getString("name", "Safe Zone");
-                            String createdBy = zoneSection.getString("createdBy", "System");
+                            // Try new cuboid format first
+                            if (zoneSection.contains("minX")) {
+                                int minX = zoneSection.getInt("minX");
+                                int minY = zoneSection.getInt("minY");
+                                int minZ = zoneSection.getInt("minZ");
+                                int maxX = zoneSection.getInt("maxX");
+                                int maxY = zoneSection.getInt("maxY");
+                                int maxZ = zoneSection.getInt("maxZ");
+                                String name = zoneSection.getString("name", "Safe Zone");
+                                String createdBy = zoneSection.getString("createdBy", "System");
 
-                            SafeZone zone = new SafeZone(centerX, centerZ, radius, name, createdBy);
-                            safeZones.put(worldName, zone);
-                            loadedZones++;
+                                SafeZone zone = new SafeZone(minX, minY, minZ, maxX, maxY, maxZ, name, createdBy);
+                                safeZones.put(worldName, zone);
+                                loadedZones++;
+
+                                plugin.getLogger().info("Loaded cuboid safe zone: " + name + " in " + worldName);
+                            }
+                            // Fallback to old circular format and convert
+                            else if (zoneSection.contains("centerX")) {
+                                int centerX = zoneSection.getInt("centerX", 0);
+                                int centerZ = zoneSection.getInt("centerZ", 0);
+                                int radius = zoneSection.getInt("radius", 100);
+                                String name = zoneSection.getString("name", "Safe Zone");
+                                String createdBy = zoneSection.getString("createdBy", "System");
+
+                                // Convert circular to cuboid (full height)
+                                SafeZone zone = new SafeZone(centerX, centerZ, radius, name, createdBy);
+                                safeZones.put(worldName, zone);
+                                loadedZones++;
+
+                                plugin.getLogger().info("Converted circular safe zone to cuboid: " + name + " in " + worldName);
+                            }
 
                         } catch (Exception e) {
                             plugin.getLogger().warning("Failed to load safe zone for world " + worldName + ": " + e.getMessage());
@@ -192,6 +288,11 @@ public class CombatTimer implements Listener {
                 }
 
                 plugin.getLogger().info("Loaded " + loadedZones + " safe zones from configuration file");
+
+                // Save back to file to convert any old circular zones to new format
+                if (loadedZones > 0) {
+                    saveSafeZonesToFile();
+                }
             } else {
                 // Create default spawn safe zone
                 initializeDefaultSafeZones();
@@ -204,7 +305,7 @@ public class CombatTimer implements Listener {
     }
 
     /**
-     * Save safe zones to configuration file
+     * Save safe zones to configuration file (cuboid format)
      */
     private void saveSafeZonesToFile() {
         try {
@@ -213,14 +314,17 @@ public class CombatTimer implements Listener {
                 safeZoneConfig.set(key, null);
             }
 
-            // Save current safe zones
+            // Save current safe zones in new cuboid format
             for (Map.Entry<String, SafeZone> entry : safeZones.entrySet()) {
                 String worldName = entry.getKey();
                 SafeZone zone = entry.getValue();
 
-                safeZoneConfig.set(worldName + ".centerX", zone.getCenterX());
-                safeZoneConfig.set(worldName + ".centerZ", zone.getCenterZ());
-                safeZoneConfig.set(worldName + ".radius", zone.getRadius());
+                safeZoneConfig.set(worldName + ".minX", zone.getMinX());
+                safeZoneConfig.set(worldName + ".minY", zone.getMinY());
+                safeZoneConfig.set(worldName + ".minZ", zone.getMinZ());
+                safeZoneConfig.set(worldName + ".maxX", zone.getMaxX());
+                safeZoneConfig.set(worldName + ".maxY", zone.getMaxY());
+                safeZoneConfig.set(worldName + ".maxZ", zone.getMaxZ());
                 safeZoneConfig.set(worldName + ".name", zone.getName());
                 safeZoneConfig.set(worldName + ".createdBy", zone.getCreatedBy());
                 safeZoneConfig.set(worldName + ".createdTime", zone.getCreatedTime());
@@ -238,28 +342,48 @@ public class CombatTimer implements Listener {
      * Initialize default safe zones
      */
     private void initializeDefaultSafeZones() {
-        // Default spawn protection (modify coordinates as needed)
-        safeZones.put("world", new SafeZone(0, 0, 100, "Spawn Area", "System"));
-        plugin.getLogger().info("Created default spawn safe zone at (0, 0) with 100 block radius");
+        // Default spawn protection cuboid (100x100 area from Y -64 to 320)
+        safeZones.put("world", new SafeZone(-50, -64, -50, 50, 320, 50, "Spawn Area", "System"));
+        plugin.getLogger().info("Created default spawn safe zone: 100x384x100 cuboid at spawn");
     }
 
     /**
-     * Add a safe zone to a world with admin tracking
+     * Add a cuboid safe zone using coordinates
      */
-    public void addSafeZone(String worldName, int centerX, int centerZ, int radius, String name, String createdBy) {
-        SafeZone zone = new SafeZone(centerX, centerZ, radius, name, createdBy);
+    public void addSafeZone(String worldName, int minX, int minY, int minZ,
+                            int maxX, int maxY, int maxZ, String name, String createdBy) {
+        SafeZone zone = new SafeZone(minX, minY, minZ, maxX, maxY, maxZ, name, createdBy);
         safeZones.put(worldName, zone);
         saveSafeZonesToFile();
 
-        plugin.getLogger().info("Added safe zone: " + name + " at " + worldName +
-                " (" + centerX + ", " + centerZ + ") radius " + radius + " by " + createdBy);
+        plugin.getLogger().info("Added cuboid safe zone: " + name + " in " + worldName +
+                " [" + zone.getMinX() + "," + zone.getMinY() + "," + zone.getMinZ() +
+                " to " + zone.getMaxX() + "," + zone.getMaxY() + "," + zone.getMaxZ() + "] by " + createdBy);
     }
 
     /**
-     * Add safe zone with default creator
+     * Add safe zone with Player creator
      */
-    public void addSafeZone(String worldName, int centerX, int centerZ, int radius, String name) {
-        addSafeZone(worldName, centerX, centerZ, radius, name, "System");
+    public void addSafeZone(String worldName, int minX, int minY, int minZ,
+                            int maxX, int maxY, int maxZ, String name, Player creator) {
+        String createdBy = creator != null ? creator.getName() : "System";
+        addSafeZone(worldName, minX, minY, minZ, maxX, maxY, maxZ, name, createdBy);
+    }
+
+    /**
+     * Legacy method for backwards compatibility (converts circular to cuboid)
+     */
+    public void addSafeZone(String worldName, int centerX, int centerZ, int radius, String name, String createdBy) {
+        addSafeZone(worldName, centerX - radius, -64, centerZ - radius,
+                centerX + radius, 320, centerZ + radius, name, createdBy);
+    }
+
+    /**
+     * Legacy method with Player creator
+     */
+    public void addSafeZone(String worldName, int centerX, int centerZ, int radius, String name, Player creator) {
+        String createdBy = creator != null ? creator.getName() : "System";
+        addSafeZone(worldName, centerX, centerZ, radius, name, createdBy);
     }
 
     /**
@@ -274,7 +398,7 @@ public class CombatTimer implements Listener {
     }
 
     /**
-     * Check if a location is in a safe zone
+     * Check if a location is in a safe zone (now cuboid-based)
      */
     public boolean isInSafeZone(Location location) {
         if (location == null || location.getWorld() == null) return false;
@@ -332,7 +456,7 @@ public class CombatTimer implements Listener {
     }
 
     /**
-     * Get distance from nearest safe zone
+     * Get distance from nearest safe zone (now uses cuboid distance)
      */
     public double getDistanceToNearestSafeZone(Location location) {
         if (location == null || location.getWorld() == null) return Double.MAX_VALUE;
@@ -342,11 +466,7 @@ public class CombatTimer implements Listener {
 
         if (safeZone == null) return Double.MAX_VALUE;
 
-        double distance = Math.sqrt(Math.pow(location.getX() - safeZone.getCenterX(), 2) +
-                Math.pow(location.getZ() - safeZone.getCenterZ(), 2));
-
-        // Return distance to edge of safe zone (negative if inside)
-        return distance - safeZone.getRadius();
+        return safeZone.getDistanceToEdge(location);
     }
 
     /**
@@ -544,7 +664,7 @@ public class CombatTimer implements Listener {
             return false;
         }
 
-        // Check safe zones
+        // Check safe zones (now cuboid-based)
         if (isInSafeZone(attacker.getLocation()) || isInSafeZone(victim.getLocation())) {
             return false;
         }
@@ -602,15 +722,10 @@ public class CombatTimer implements Listener {
         if (currentZone != null) {
             player.sendMessage(Component.text("🏠 LOCATION: " + currentZone.getName() + " (Safe Zone)")
                     .color(NamedTextColor.GREEN));
-
-            double distanceFromCenter = Math.sqrt(
-                    Math.pow(player.getLocation().getX() - currentZone.getCenterX(), 2) +
-                            Math.pow(player.getLocation().getZ() - currentZone.getCenterZ(), 2)
-            );
-            int edgeDistance = currentZone.getRadius() - (int)distanceFromCenter;
-
-            player.sendMessage(Component.text("📏 Distance to edge: " + edgeDistance + " blocks")
+            player.sendMessage(Component.text("📐 Zone Size: " + currentZone.getSizeX() + " × " + currentZone.getSizeY() + " × " + currentZone.getSizeZ())
                     .color(NamedTextColor.GRAY));
+            player.sendMessage(Component.text("🛡 Protected area")
+                    .color(NamedTextColor.GREEN));
         } else {
             player.sendMessage(Component.text("🏠 LOCATION: PvP Zone")
                     .color(NamedTextColor.RED));
@@ -810,17 +925,66 @@ public class CombatTimer implements Listener {
     }
 
     /**
-     * Create a safe zone at current location with creator tracking
-     */
-    public void addSafeZone(String worldName, int centerX, int centerZ, int radius, String name, Player creator) {
-        String createdBy = creator != null ? creator.getName() : "System";
-        addSafeZone(worldName, centerX, centerZ, radius, name, createdBy);
-    }
-
-    /**
      * Save all safe zone data
      */
     public void saveAllData() {
         saveSafeZonesToFile();
+    }
+
+    /**
+     * Debug method to show safe zone coverage at a location
+     */
+    public void debugSafeZoneAt(Location location, Player player) {
+        if (!player.hasPermission("maces.admin")) return;
+
+        SafeZone zone = getSafeZone(location);
+        if (zone != null) {
+            player.sendMessage(Component.text("DEBUG: Location is in safe zone '" + zone.getName() + "'")
+                    .color(NamedTextColor.AQUA));
+            player.sendMessage(Component.text("Zone bounds: [" + zone.getMinX() + "," + zone.getMinY() + "," + zone.getMinZ() +
+                            " to " + zone.getMaxX() + "," + zone.getMaxY() + "," + zone.getMaxZ() + "]")
+                    .color(NamedTextColor.GRAY));
+            player.sendMessage(Component.text("Zone size: " + zone.getSizeX() + " × " + zone.getSizeY() + " × " + zone.getSizeZ())
+                    .color(NamedTextColor.GRAY));
+        } else {
+            player.sendMessage(Component.text("DEBUG: Location is NOT in any safe zone")
+                    .color(NamedTextColor.RED));
+
+            double nearestDistance = getDistanceToNearestSafeZone(location);
+            if (nearestDistance != Double.MAX_VALUE) {
+                player.sendMessage(Component.text("Nearest safe zone: " + (int)nearestDistance + " blocks away")
+                        .color(NamedTextColor.GRAY));
+            }
+        }
+    }
+
+    /**
+     * Check if coordinates are valid for safe zone creation
+     */
+    public boolean areCoordinatesValid(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+        // Check if coordinates are within reasonable world bounds
+        final int MAX_COORDINATE = 29999999;
+        final int MIN_COORDINATE = -29999999;
+        final int MIN_Y = -64;
+        final int MAX_Y = 320;
+
+        // Check X bounds
+        if (minX < MIN_COORDINATE || maxX > MAX_COORDINATE) return false;
+        // Check Z bounds
+        if (minZ < MIN_COORDINATE || maxZ > MAX_COORDINATE) return false;
+        // Check Y bounds
+        if (minY < MIN_Y || maxY > MAX_Y) return false;
+
+        // Ensure min is actually less than max
+        if (minX > maxX || minY > maxY || minZ > maxZ) return false;
+
+        return true;
+    }
+
+    /**
+     * Calculate volume of a cuboid safe zone
+     */
+    public long calculateVolume(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+        return (long)(maxX - minX + 1) * (maxY - minY + 1) * (maxZ - minZ + 1);
     }
 }
