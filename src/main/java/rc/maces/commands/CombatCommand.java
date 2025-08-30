@@ -64,13 +64,13 @@ public class CombatCommand implements CommandExecutor {
                     String reason = args.length > 2 ? String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length)) : "Admin command";
                     forcePlayerIntoCombat(player, args[1], reason);
                     return true;
-                case "protection":
+                case "status":
                     if (args.length != 2) {
-                        player.sendMessage(Component.text("Usage: /combat protection <player>")
+                        player.sendMessage(Component.text("Usage: /combat status <player>")
                                 .color(NamedTextColor.RED));
                         return true;
                     }
-                    showPlayerProtectionStatus(player, args[1]);
+                    showPlayerStatus(player, args[1]);
                     return true;
                 case "safezone":
                     showSafeZoneInfo(player);
@@ -179,7 +179,7 @@ public class CombatCommand implements CommandExecutor {
         admin.getServer().getLogger().info("Admin " + admin.getName() + " forced " + target.getName() + " into combat: " + reason);
     }
 
-    private void showPlayerProtectionStatus(Player admin, String targetName) {
+    private void showPlayerStatus(Player admin, String targetName) {
         Player target = Bukkit.getPlayer(targetName);
 
         if (target == null) {
@@ -188,26 +188,23 @@ public class CombatCommand implements CommandExecutor {
             return;
         }
 
-        admin.sendMessage(Component.text("═══════ PROTECTION STATUS FOR " + target.getName().toUpperCase() + " ═══════")
+        admin.sendMessage(Component.text("═══════ STATUS FOR " + target.getName().toUpperCase() + " ═══════")
                 .color(NamedTextColor.GOLD));
 
         // Combat status
         if (combatTimer.isInCombat(target)) {
             admin.sendMessage(Component.text("⚔ Combat Status: IN COMBAT (" + combatTimer.getRemainingCombatTimeFormatted(target) + ")")
                     .color(NamedTextColor.RED));
+
+            // Show who caused the combat
+            Player cause = combatTimer.getCombatCause(target);
+            if (cause != null) {
+                admin.sendMessage(Component.text("⚔ Combat Cause: " + cause.getName())
+                        .color(NamedTextColor.YELLOW));
+            }
         } else {
             admin.sendMessage(Component.text("⚔ Combat Status: Not in combat")
                     .color(NamedTextColor.GREEN));
-        }
-
-        // Spawn protection
-        if (combatTimer.hasSpawnProtection(target)) {
-            long remaining = combatTimer.getRemainingSpawnProtection(target) / 1000;
-            admin.sendMessage(Component.text("🛡 Spawn Protection: " + remaining + " seconds remaining")
-                    .color(NamedTextColor.AQUA));
-        } else {
-            admin.sendMessage(Component.text("🛡 Spawn Protection: None")
-                    .color(NamedTextColor.GRAY));
         }
 
         // Safe zone status
@@ -218,9 +215,15 @@ public class CombatCommand implements CommandExecutor {
         } else {
             admin.sendMessage(Component.text("🏠 Location: PvP Zone")
                     .color(NamedTextColor.RED));
+
+            double distanceToSafeZone = combatTimer.getDistanceToNearestSafeZone(target.getLocation());
+            if (distanceToSafeZone != Double.MAX_VALUE && distanceToSafeZone > 0) {
+                admin.sendMessage(Component.text("🛡 Nearest safe zone: " + (int)distanceToSafeZone + " blocks away")
+                        .color(NamedTextColor.GRAY));
+            }
         }
 
-        admin.sendMessage(Component.text("═════════════════════════════════════════")
+        admin.sendMessage(Component.text("═════════════════════════════════════")
                 .color(NamedTextColor.GOLD));
     }
 
@@ -239,11 +242,28 @@ public class CombatCommand implements CommandExecutor {
                 .color(NamedTextColor.GRAY));
         admin.sendMessage(Component.text(""));
 
-        // Show configured safe zones (this would need to be implemented in CombatTimer)
-        admin.sendMessage(Component.text("Configured Safe Zones:")
+        // Show configured safe zones
+        Map<String, CombatTimer.SafeZone> safeZones = combatTimer.getSafeZones();
+        admin.sendMessage(Component.text("Configured Safe Zones (" + safeZones.size() + "):")
                 .color(NamedTextColor.YELLOW));
-        admin.sendMessage(Component.text("• Spawn Area (100 block radius)")
-                .color(NamedTextColor.DARK_GRAY));
+
+        if (safeZones.isEmpty()) {
+            admin.sendMessage(Component.text("• No safe zones configured")
+                    .color(NamedTextColor.GRAY));
+        } else {
+            for (Map.Entry<String, CombatTimer.SafeZone> entry : safeZones.entrySet()) {
+                String worldName = entry.getKey();
+                CombatTimer.SafeZone zone = entry.getValue();
+                admin.sendMessage(Component.text("• " + zone.getName() + " in " + worldName)
+                        .color(NamedTextColor.WHITE));
+                admin.sendMessage(Component.text("  Size: " + zone.getSizeX() + " × " + zone.getSizeY() + " × " + zone.getSizeZ())
+                        .color(NamedTextColor.DARK_GRAY));
+            }
+        }
+
+        admin.sendMessage(Component.text(""));
+        admin.sendMessage(Component.text("💡 Use '/safezone' commands to manage safe zones")
+                .color(NamedTextColor.AQUA));
 
         admin.sendMessage(Component.text("═══════════════════════════════════")
                 .color(NamedTextColor.GOLD));
@@ -345,9 +365,9 @@ public class CombatCommand implements CommandExecutor {
                 .append(Component.text(" - Force a player into combat")
                         .color(NamedTextColor.GRAY)));
 
-        admin.sendMessage(Component.text("/combat protection <player>")
+        admin.sendMessage(Component.text("/combat status <player>")
                 .color(NamedTextColor.YELLOW)
-                .append(Component.text(" - Check player's protection status")
+                .append(Component.text(" - Check player's combat and location status")
                         .color(NamedTextColor.GRAY)));
 
         admin.sendMessage(Component.text("/combat safezone")

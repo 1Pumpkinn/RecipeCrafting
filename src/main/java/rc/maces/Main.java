@@ -21,9 +21,8 @@ public class Main extends JavaPlugin {
     private CraftingRestrictionListener craftingRestrictionListener;
     private HeavyCoreMonitor heavyCoreMonitor;
     private MovementPreventionListener movementPreventionListener;
-    private SpawnProtectionListener spawnProtectionListener;
     private CombatCommandBlocker combatCommandBlocker;
-    private ElytraDisabling elytraDisabling; // Move this after combatTimer and trustManager
+    private ElytraDisabling elytraDisabling;
 
     @Override
     public void onEnable() {
@@ -35,7 +34,7 @@ public class Main extends JavaPlugin {
         // Initialize combat timer after trust manager
         combatTimer = new CombatTimer(this, trustManager);
 
-        // NOW initialize elytra disabling after both combatTimer and trustManager exist
+        // Initialize elytra disabling after both combatTimer and trustManager exist
         elytraDisabling = new ElytraDisabling(combatTimer, trustManager, this);
 
         maceManager = new MaceManager(this, cooldownManager, trustManager);
@@ -50,9 +49,6 @@ public class Main extends JavaPlugin {
 
         // Initialize movement prevention listener
         movementPreventionListener = new MovementPreventionListener();
-
-        // Initialize spawn protection listener
-        spawnProtectionListener = new SpawnProtectionListener(combatTimer);
 
         // Initialize combat command blocker
         combatCommandBlocker = new CombatCommandBlocker(combatTimer);
@@ -116,10 +112,6 @@ public class Main extends JavaPlugin {
         // Register combat timer listener (CRITICAL for combat logging)
         getServer().getPluginManager().registerEvents(
                 combatTimer, this);
-
-        // Register spawn protection listener
-        getServer().getPluginManager().registerEvents(
-                spawnProtectionListener, this);
 
         // Register ElytraDisabling listener (CRITICAL for elytra blocking)
         getServer().getPluginManager().registerEvents(
@@ -238,10 +230,6 @@ public class Main extends JavaPlugin {
 
     public MovementPreventionListener getMovementPreventionListener() {
         return movementPreventionListener;
-    }
-
-    public SpawnProtectionListener getSpawnProtectionListener() {
-        return spawnProtectionListener;
     }
 
     public CombatCommandBlocker getCombatCommandBlocker() {

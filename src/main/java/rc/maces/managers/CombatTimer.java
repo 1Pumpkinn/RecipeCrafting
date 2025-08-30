@@ -13,7 +13,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -30,9 +29,7 @@ public class CombatTimer implements Listener {
     private final TrustManager trustManager;
     private final Map<UUID, Long> combatPlayers = new HashMap<>();
     private final Map<UUID, UUID> combatCause = new HashMap<>(); // Track who caused each player's combat
-    private final Map<UUID, Long> spawnProtection = new HashMap<>(); // Track spawn protection
     private static final long COMBAT_TIME = 15000; // 15 seconds in milliseconds
-    private static final long SPAWN_PROTECTION_TIME = 10000; // 10 seconds spawn protection
 
     // Enhanced safe zone system with cuboid support
     private final Map<String, SafeZone> safeZones = new HashMap<>();
@@ -183,32 +180,9 @@ public class CombatTimer implements Listener {
             String attackerZone = getSafeZoneName(attacker.getLocation());
             String zoneName = victimZone != null ? victimZone : attackerZone;
 
-            attacker.sendMessage(Component.text("🏠 PvP is disabled in " + zoneName + "!")
-                    .color(NamedTextColor.YELLOW));
-            victim.sendMessage(Component.text("🛡 You are protected by " + zoneName + "!")
-                    .color(NamedTextColor.GREEN));
 
             plugin.getLogger().info("PvP blocked in safe zone (" + zoneName + "): " +
                     attacker.getName() + " vs " + victim.getName());
-            return;
-        }
-
-        // Check spawn protection
-        if (hasSpawnProtection(victim) || hasSpawnProtection(attacker)) {
-            event.setCancelled(true);
-
-            if (hasSpawnProtection(victim)) {
-                attacker.sendMessage(Component.text("🛡 " + victim.getName() + " has spawn protection!")
-                        .color(NamedTextColor.YELLOW));
-                victim.sendMessage(Component.text("🛡 Your spawn protection blocked the attack!")
-                        .color(NamedTextColor.GREEN));
-            }
-
-            if (hasSpawnProtection(attacker)) {
-                attacker.sendMessage(Component.text("🛡 You cannot attack while you have spawn protection!")
-                        .color(NamedTextColor.YELLOW));
-            }
-
             return;
         }
 
@@ -232,6 +206,54 @@ public class CombatTimer implements Listener {
         putInCombat(attacker, victim);
 
         plugin.getLogger().info("Combat initiated between " + attacker.getName() + " and " + victim.getName());
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+
+        if (isInCombat(player)) {
+            // Check if the player was put in combat by a trusted ally
+            UUID combatCauseUUID = combatCause.get(player.getUniqueId());
+            boolean killedByAlly = false;
+
+            if (combatCauseUUID != null) {
+                Player combatCausePlayer = Bukkit.getPlayer(combatCauseUUID);
+
+                if (trustManager != null && combatCausePlayer != null &&
+                        trustManager.isTrusted(player, combatCausePlayer)) {
+                    killedByAlly = true;
+                }
+            }
+
+            if (!killedByAlly) {
+                // Kill player for combat logging (only if not caused by ally)
+                player.setHealth(0);
+
+                Component deathMessage = Component.text(player.getName() + " has been killed for combat logging!")
+                        .color(NamedTextColor.RED);
+                Bukkit.broadcast(deathMessage);
+
+                plugin.getLogger().info(player.getName() + " was killed for combat logging");
+            } else {
+                // Player was in combat due to ally interaction - don't kill them
+                plugin.getLogger().info(player.getName() + " logged off in ally-caused combat - no penalty applied");
+
+                // Optionally notify the ally that their friend logged off
+                Player ally = Bukkit.getPlayer(combatCauseUUID);
+                if (ally != null && ally.isOnline()) {
+                    ally.sendMessage(Component.text("⚠ Your ally " + player.getName() + " has logged off.")
+                            .color(NamedTextColor.YELLOW));
+                }
+            }
+        }
+
+        // Clean up tracking data
+        combatPlayers.remove(player.getUniqueId());
+        combatCause.remove(player.getUniqueId());
+
+        // Also clean up if this player was the cause of someone else's combat
+        combatCause.values().removeIf(causeUUID -> causeUUID.equals(player.getUniqueId()));
     }
 
     // ============ ENHANCED SAFE ZONE METHODS ============
@@ -478,63 +500,6 @@ public class CombatTimer implements Listener {
 
     // ============ COMBAT TIMER METHODS ============
 
-    @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
-        Player player = event.getPlayer();
-
-        // Give new players spawn protection
-        giveSpawnProtection(player, "joined the server");
-    }
-
-    @EventHandler
-    public void onPlayerQuit(PlayerQuitEvent event) {
-        Player player = event.getPlayer();
-
-        if (isInCombat(player)) {
-            // Check if the player was put in combat by a trusted ally
-            UUID combatCauseUUID = combatCause.get(player.getUniqueId());
-            boolean killedByAlly = false;
-
-            if (combatCauseUUID != null) {
-                Player combatCausePlayer = Bukkit.getPlayer(combatCauseUUID);
-
-                if (trustManager != null && combatCausePlayer != null &&
-                        trustManager.isTrusted(player, combatCausePlayer)) {
-                    killedByAlly = true;
-                }
-            }
-
-            if (!killedByAlly) {
-                // Kill player for combat logging (only if not caused by ally)
-                player.setHealth(0);
-
-                Component deathMessage = Component.text(player.getName() + " has been killed for combat logging!")
-                        .color(NamedTextColor.RED);
-                Bukkit.broadcast(deathMessage);
-
-                plugin.getLogger().info(player.getName() + " was killed for combat logging");
-            } else {
-                // Player was in combat due to ally interaction - don't kill them
-                plugin.getLogger().info(player.getName() + " logged off in ally-caused combat - no penalty applied");
-
-                // Optionally notify the ally that their friend logged off
-                Player ally = Bukkit.getPlayer(combatCauseUUID);
-                if (ally != null && ally.isOnline()) {
-                    ally.sendMessage(Component.text("⚠ Your ally " + player.getName() + " has logged off.")
-                            .color(NamedTextColor.YELLOW));
-                }
-            }
-        }
-
-        // Clean up tracking data
-        combatPlayers.remove(player.getUniqueId());
-        combatCause.remove(player.getUniqueId());
-        spawnProtection.remove(player.getUniqueId());
-
-        // Also clean up if this player was the cause of someone else's combat
-        combatCause.values().removeIf(causeUUID -> causeUUID.equals(player.getUniqueId()));
-    }
-
     public void putInCombat(Player player) {
         putInCombat(player, null);
     }
@@ -631,7 +596,7 @@ public class CombatTimer implements Listener {
     }
 
     /**
-     * Enhanced canPerformAction that also checks spawn protection and safe zones
+     * Check if player can perform an action while in combat
      */
     public boolean canPerformAction(Player player, String actionName) {
         if (!isInCombat(player)) {
@@ -659,11 +624,6 @@ public class CombatTimer implements Listener {
             return false;
         }
 
-        // Check spawn protection
-        if (hasSpawnProtection(attacker) || hasSpawnProtection(victim)) {
-            return false;
-        }
-
         // Check safe zones (now cuboid-based)
         if (isInSafeZone(attacker.getLocation()) || isInSafeZone(victim.getLocation())) {
             return false;
@@ -679,7 +639,7 @@ public class CombatTimer implements Listener {
     }
 
     /**
-     * Show enhanced combat status including protections
+     * Show combat status
      */
     public void showCombatStatus(Player player) {
         player.sendMessage(Component.text("═══════ COMBAT STATUS ═══════")
@@ -707,16 +667,6 @@ public class CombatTimer implements Listener {
                     .decoration(TextDecoration.BOLD, true));
         }
 
-        // Show spawn protection status
-        if (hasSpawnProtection(player)) {
-            long remaining = getRemainingSpawnProtection(player) / 1000;
-            player.sendMessage(Component.text("🛡 SPAWN PROTECTION: " + remaining + " seconds remaining")
-                    .color(NamedTextColor.AQUA));
-        } else {
-            player.sendMessage(Component.text("🛡 SPAWN PROTECTION: None")
-                    .color(NamedTextColor.GRAY));
-        }
-
         // Show safe zone status with enhanced info
         SafeZone currentZone = getSafeZone(player.getLocation());
         if (currentZone != null) {
@@ -724,85 +674,15 @@ public class CombatTimer implements Listener {
                     .color(NamedTextColor.GREEN));
             player.sendMessage(Component.text("📐 Zone Size: " + currentZone.getSizeX() + " × " + currentZone.getSizeY() + " × " + currentZone.getSizeZ())
                     .color(NamedTextColor.GRAY));
-            player.sendMessage(Component.text("🛡 Protected area")
-                    .color(NamedTextColor.GREEN));
         } else {
-            player.sendMessage(Component.text("🏠 LOCATION: PvP Zone")
-                    .color(NamedTextColor.RED));
 
             double distanceToSafeZone = getDistanceToNearestSafeZone(player.getLocation());
             if (distanceToSafeZone != Double.MAX_VALUE && distanceToSafeZone > 0) {
-                player.sendMessage(Component.text("🛡 Nearest safe zone: " + (int)distanceToSafeZone + " blocks away")
-                        .color(NamedTextColor.GRAY));
             }
         }
 
         player.sendMessage(Component.text("═══════════════════════════")
                 .color(NamedTextColor.GOLD));
-    }
-
-    // ============ SPAWN PROTECTION METHODS ============
-
-    /**
-     * Give a player spawn protection
-     */
-    public void giveSpawnProtection(Player player, String reason) {
-        if (player == null || !player.isOnline()) return;
-
-        spawnProtection.put(player.getUniqueId(), System.currentTimeMillis());
-
-        player.sendMessage(Component.text("🛡 Spawn protection granted for " + (SPAWN_PROTECTION_TIME/1000) + " seconds (" + reason + ")")
-                .color(NamedTextColor.AQUA));
-
-        plugin.getLogger().info("Granted spawn protection to " + player.getName() + ": " + reason);
-    }
-
-    /**
-     * Check if a player has spawn protection
-     */
-    public boolean hasSpawnProtection(Player player) {
-        if (player == null) return false;
-
-        Long protectionTime = spawnProtection.get(player.getUniqueId());
-        if (protectionTime == null) return false;
-
-        if (System.currentTimeMillis() - protectionTime > SPAWN_PROTECTION_TIME) {
-            spawnProtection.remove(player.getUniqueId());
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Get remaining spawn protection time in milliseconds
-     */
-    public long getRemainingSpawnProtection(Player player) {
-        if (player == null) return 0;
-
-        Long protectionTime = spawnProtection.get(player.getUniqueId());
-        if (protectionTime == null) return 0;
-
-        long remaining = SPAWN_PROTECTION_TIME - (System.currentTimeMillis() - protectionTime);
-        if (remaining <= 0) {
-            spawnProtection.remove(player.getUniqueId());
-            return 0;
-        }
-
-        return remaining;
-    }
-
-    /**
-     * Remove spawn protection from a player
-     */
-    public void removeSpawnProtection(Player player, String reason) {
-        if (player == null) return;
-
-        if (spawnProtection.remove(player.getUniqueId()) != null) {
-            player.sendMessage(Component.text("🛡 Spawn protection removed: " + reason)
-                    .color(NamedTextColor.GRAY));
-            plugin.getLogger().info("Removed spawn protection from " + player.getName() + ": " + reason);
-        }
     }
 
     // ============ CLEANUP AND UTILITY METHODS ============
@@ -821,19 +701,6 @@ public class CombatTimer implements Listener {
                         }
                         // Also clean up cause tracking for expired combat timers
                         combatCause.remove(entry.getKey());
-                        return true;
-                    }
-                    return false;
-                });
-
-                // Clean up expired spawn protection
-                spawnProtection.entrySet().removeIf(entry -> {
-                    if (System.currentTimeMillis() - entry.getValue() > SPAWN_PROTECTION_TIME) {
-                        Player player = Bukkit.getPlayer(entry.getKey());
-                        if (player != null && player.isOnline()) {
-                            player.sendMessage(Component.text("🛡 Spawn protection has expired")
-                                    .color(NamedTextColor.GRAY));
-                        }
                         return true;
                     }
                     return false;
@@ -907,13 +774,6 @@ public class CombatTimer implements Listener {
      */
     public static long getCombatDuration() {
         return COMBAT_TIME;
-    }
-
-    /**
-     * Get the spawn protection duration in milliseconds
-     */
-    public static long getSpawnProtectionDuration() {
-        return SPAWN_PROTECTION_TIME;
     }
 
     /**
