@@ -15,6 +15,8 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 import rc.maces.managers.CombatTimer;
 import rc.maces.managers.TrustManager;
 
@@ -26,16 +28,18 @@ public class ElytraDisabling implements Listener {
 
     private final CombatTimer combatTimer;
     private final TrustManager trustManager;
+    private final JavaPlugin plugin;
 
-    public ElytraDisabling(CombatTimer combatTimer, TrustManager trustManager) {
+    public ElytraDisabling(CombatTimer combatTimer, TrustManager trustManager, JavaPlugin plugin) {
         this.combatTimer = combatTimer;
         this.trustManager = trustManager;
+        this.plugin = plugin;
     }
 
     /**
      * Prevent elytra gliding during combat (unless caused by ally)
      */
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onElytraToggle(EntityToggleGlideEvent event) {
         if (!(event.getEntity() instanceof Player)) {
             return;
@@ -60,16 +64,25 @@ public class ElytraDisabling implements Listener {
         // Block elytra gliding
         event.setCancelled(true);
 
-        player.sendMessage(Component.text("❌ You cannot use elytra while in combat!")
-                .color(NamedTextColor.RED));
-        player.sendMessage(Component.text("⚔ Combat ends in: " + combatTimer.getRemainingCombatTimeFormatted(player))
-                .color(NamedTextColor.YELLOW));
+        // Force stop gliding to make sure
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (player.isOnline() && player.isGliding()) {
+                    player.setGliding(false);
+                }
+            }
+        }.runTaskLater(plugin, 1L);
+
+        sendCombatMessage(player, "You cannot use elytra while in combat!");
+
+        plugin.getLogger().info("Blocked elytra gliding for " + player.getName() + " (in combat)");
     }
 
     /**
      * Prevent equipping elytra during combat by clicking in inventory
      */
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) {
             return;
@@ -89,18 +102,15 @@ public class ElytraDisabling implements Listener {
         // Check if player is trying to equip elytra
         if (isElytraEquipAttempt(event, player)) {
             event.setCancelled(true);
-
-            player.sendMessage(Component.text("❌ You cannot equip elytra while in combat!")
-                    .color(NamedTextColor.RED));
-            player.sendMessage(Component.text("⚔ Combat ends in: " + combatTimer.getRemainingCombatTimeFormatted(player))
-                    .color(NamedTextColor.YELLOW));
+            sendCombatMessage(player, "You cannot equip elytra while in combat!");
+            plugin.getLogger().info("Blocked elytra equipping for " + player.getName() + " (in combat)");
         }
     }
 
     /**
      * Prevent equipping elytra during combat by dragging in inventory
      */
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onInventoryDrag(InventoryDragEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) {
             return;
@@ -123,11 +133,8 @@ public class ElytraDisabling implements Listener {
             // Check if any of the drag slots is the chestplate slot (slot 38 in player inventory)
             if (event.getRawSlots().contains(38)) {
                 event.setCancelled(true);
-
-                player.sendMessage(Component.text("❌ You cannot equip elytra while in combat!")
-                        .color(NamedTextColor.RED));
-                player.sendMessage(Component.text("⚔ Combat ends in: " + combatTimer.getRemainingCombatTimeFormatted(player))
-                        .color(NamedTextColor.YELLOW));
+                sendCombatMessage(player, "You cannot equip elytra while in combat!");
+                plugin.getLogger().info("Blocked elytra drag equipping for " + player.getName() + " (in combat)");
             }
         }
     }
@@ -135,7 +142,7 @@ public class ElytraDisabling implements Listener {
     /**
      * Prevent right-clicking elytra to equip during combat
      */
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
 
@@ -156,11 +163,8 @@ public class ElytraDisabling implements Listener {
 
             if (chestplate == null || chestplate.getType() == Material.AIR) {
                 event.setCancelled(true);
-
-                player.sendMessage(Component.text("❌ You cannot equip elytra while in combat!")
-                        .color(NamedTextColor.RED));
-                player.sendMessage(Component.text("⚔ Combat ends in: " + combatTimer.getRemainingCombatTimeFormatted(player))
-                        .color(NamedTextColor.YELLOW));
+                sendCombatMessage(player, "You cannot equip elytra while in combat!");
+                plugin.getLogger().info("Blocked elytra right-click equipping for " + player.getName() + " (in combat)");
             }
         }
     }
@@ -198,23 +202,26 @@ public class ElytraDisabling implements Listener {
         ItemStack clickedItem = event.getCurrentItem();
         ItemStack cursorItem = event.getCursor();
 
-        // Check if clicking elytra in inventory to move to chestplate slot
-        if (event.getSlot() == 38 && event.getSlotType() == InventoryType.SlotType.ARMOR) {
-            // Clicking on chestplate slot
+        plugin.getLogger().info("Checking elytra equip attempt: slot=" + event.getSlot() + ", slotType=" + event.getSlotType() +
+                ", clickedItem=" + (clickedItem != null ? clickedItem.getType() : "null") +
+                ", cursorItem=" + (cursorItem != null ? cursorItem.getType() : "null"));
+
+        // Check if clicking on chestplate slot (slot 38)
+        if (event.getSlot() == 38) {
+            // Placing item from cursor into chestplate slot
             if (cursorItem != null && cursorItem.getType() == Material.ELYTRA) {
-                return true; // Trying to place elytra in chestplate slot
+                plugin.getLogger().info("Detected elytra placement in chestplate slot");
+                return true;
             }
         }
 
-        // Check if clicking elytra to swap with current chestplate
-        if (clickedItem != null && clickedItem.getType() == Material.ELYTRA) {
-            if (event.getClick().isShiftClick()) {
-                // Shift-clicking elytra to auto-equip
-                PlayerInventory inventory = player.getInventory();
-                ItemStack currentChestplate = inventory.getChestplate();
-                if (currentChestplate == null || currentChestplate.getType() == Material.AIR) {
-                    return true; // Would auto-equip to empty chestplate slot
-                }
+        // Check if shift-clicking elytra to auto-equip
+        if (clickedItem != null && clickedItem.getType() == Material.ELYTRA && event.getClick().isShiftClick()) {
+            PlayerInventory inventory = player.getInventory();
+            ItemStack currentChestplate = inventory.getChestplate();
+            if (currentChestplate == null || currentChestplate.getType() == Material.AIR) {
+                plugin.getLogger().info("Detected shift-click elytra auto-equip");
+                return true;
             }
         }
 
@@ -224,12 +231,29 @@ public class ElytraDisabling implements Listener {
             if (hotbarSlot >= 0 && hotbarSlot < 9) {
                 ItemStack hotbarItem = player.getInventory().getItem(hotbarSlot);
                 if (hotbarItem != null && hotbarItem.getType() == Material.ELYTRA) {
-                    return true; // Trying to swap elytra from hotbar to chestplate
+                    plugin.getLogger().info("Detected number key elytra swap");
+                    return true;
                 }
             }
         }
 
+        // Check for double-click auto-equip
+        if (event.getClick().toString().contains("DOUBLE_CLICK") && cursorItem != null && cursorItem.getType() == Material.ELYTRA) {
+            plugin.getLogger().info("Detected double-click elytra equip");
+            return true;
+        }
+
         return false;
+    }
+
+    /**
+     * Send combat message to player
+     */
+    private void sendCombatMessage(Player player, String message) {
+        player.sendMessage(Component.text("❌ " + message)
+                .color(NamedTextColor.RED));
+        player.sendMessage(Component.text("⚔ Combat ends in: " + combatTimer.getRemainingCombatTimeFormatted(player))
+                .color(NamedTextColor.YELLOW));
     }
 
     /**
@@ -269,6 +293,34 @@ public class ElytraDisabling implements Listener {
             player.sendMessage(Component.text("🪂 Your elytra has been removed: " + reason)
                     .color(NamedTextColor.YELLOW));
         }
+    }
+
+    /**
+     * Continuous check to remove elytras from players in combat (safety net)
+     */
+    public void startElytraMonitoring() {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Player player : plugin.getServer().getOnlinePlayers()) {
+                    if (combatTimer.isInCombat(player) && !combatTimer.isCombatCausedByAlly(player)) {
+                        // Check if player is wearing elytra
+                        if (isWearingElytra(player)) {
+                            player.sendMessage(Component.text("⚠ Elytra automatically removed due to combat!")
+                                    .color(NamedTextColor.YELLOW));
+                            forceRemoveElytra(player, "entered combat");
+                        }
+
+                        // Check if player is gliding
+                        if (player.isGliding()) {
+                            player.setGliding(false);
+                            player.sendMessage(Component.text("⚠ Elytra flight stopped due to combat!")
+                                    .color(NamedTextColor.YELLOW));
+                        }
+                    }
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 10L); // Check every half second
     }
 
     /**

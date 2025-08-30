@@ -30,7 +30,7 @@ public class Main extends JavaPlugin {
     public void onEnable() {
         // Initialize managers in correct order (TrustManager before MaceManager)
         cooldownManager = new CooldownManager();
-        elytraDisabling = new ElytraDisabling(combatTimer, trustManager);
+        elytraDisabling = new ElytraDisabling(combatTimer, trustManager, this);
         elementManager = new ElementManager(this);
         trustManager = new TrustManager(this);
 
@@ -117,6 +117,10 @@ public class Main extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 spawnProtectionListener, this);
 
+        // Register for ElytraDisabling
+        getServer().getPluginManager().registerEvents(
+                elytraDisabling, this);
+
         // Register combat command blocker
         getServer().getPluginManager().registerEvents(
                 combatCommandBlocker, this);
@@ -156,6 +160,7 @@ public class Main extends JavaPlugin {
         // Plugin startup messages
         getLogger().info("Maces plugin enabled!");
         getLogger().info("Registered " + recipeManager.getRecipeCount() + " custom recipes.");
+        elytraDisabling.startElytraMonitoring();
         getLogger().info("Combat timer system enabled!");
     }
 
