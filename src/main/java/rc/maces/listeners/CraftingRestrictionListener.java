@@ -3,17 +3,14 @@ package rc.maces.listeners;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Crafter;
-import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockDispenseEvent;
-import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.inventory.*;
@@ -28,9 +25,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Comprehensive mace blocking system that prevents vanilla maces from being created
- * through ANY method including crafters, hoppers, dispensers, etc.
- * Also prevents elemental maces from being crafted in crafter blocks.
+ * Simplified mace blocking system that prevents vanilla and elemental maces
+ * from being crafted through ANY method.
  */
 public class CraftingRestrictionListener implements Listener {
 
@@ -49,29 +45,25 @@ public class CraftingRestrictionListener implements Listener {
     public CraftingRestrictionListener(MaceManager maceManager, JavaPlugin plugin) {
         this.maceManager = maceManager;
         this.plugin = plugin;
-
-        // Start periodic crafter monitoring
         startCrafterMonitoring();
     }
 
-    // ================== PLAYER CRAFTING PREVENTION ==================
+    // ================== PREVENT ALL CRAFTING ==================
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onCraftItem(CraftItemEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) {
-            return;
-        }
-
-        Player player = (Player) event.getWhoClicked();
         ItemStack result = event.getRecipe().getResult();
 
         // Block vanilla mace crafting everywhere
         if (isVanillaMace(result)) {
             event.setCancelled(true);
-            player.sendMessage(Component.text("❌ Normal maces are disabled! Craft elemental maces instead!")
-                    .color(NamedTextColor.RED));
-            player.sendMessage(Component.text("Use /element to see available elemental maces!")
-                    .color(NamedTextColor.YELLOW));
+            if (event.getWhoClicked() instanceof Player) {
+                Player player = (Player) event.getWhoClicked();
+                player.sendMessage(Component.text("❌ Normal maces are disabled! Craft elemental maces instead!")
+                        .color(NamedTextColor.RED));
+                player.sendMessage(Component.text("Use /element to see available elemental maces!")
+                        .color(NamedTextColor.YELLOW));
+            }
             return;
         }
 
@@ -84,10 +76,13 @@ public class CraftingRestrictionListener implements Listener {
 
                 if (elementalMaceRecipes.contains(recipeKey)) {
                     event.setCancelled(true);
-                    player.sendMessage(Component.text("❌ Elemental maces cannot be crafted in crafter blocks!")
-                            .color(NamedTextColor.RED));
-                    player.sendMessage(Component.text("Please use a regular crafting table instead!")
-                            .color(NamedTextColor.YELLOW));
+                    if (event.getWhoClicked() instanceof Player) {
+                        Player player = (Player) event.getWhoClicked();
+                        player.sendMessage(Component.text("❌ Elemental maces cannot be crafted in crafter blocks!")
+                                .color(NamedTextColor.RED));
+                        player.sendMessage(Component.text("Please use a regular crafting table instead!")
+                                .color(NamedTextColor.YELLOW));
+                    }
                     return;
                 }
             }
@@ -98,13 +93,13 @@ public class CraftingRestrictionListener implements Listener {
     public void onPrepareItemCraft(PrepareItemCraftEvent event) {
         ItemStack result = event.getRecipe() != null ? event.getRecipe().getResult() : null;
 
-        // Block vanilla maces from appearing in result slots
+        // Remove vanilla maces from result slots
         if (isVanillaMace(result)) {
             event.getInventory().setResult(null);
             return;
         }
 
-        // Block elemental maces from appearing in crafter result slots
+        // Remove elemental maces from crafter result slots
         if (event.getInventory().getType() == InventoryType.CRAFTER && event.getRecipe() instanceof ShapedRecipe) {
             ShapedRecipe shapedRecipe = (ShapedRecipe) event.getRecipe();
             String recipeKey = shapedRecipe.getKey().getKey();
@@ -117,47 +112,29 @@ public class CraftingRestrictionListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) {
-            return;
-        }
-
-        Player player = (Player) event.getWhoClicked();
-
-        // Block vanilla maces in result slots
+        // Block taking items from result slots
         if (event.getSlotType() == InventoryType.SlotType.RESULT) {
             ItemStack currentItem = event.getCurrentItem();
+
             if (isVanillaMace(currentItem)) {
                 event.setCancelled(true);
-                player.sendMessage(Component.text("❌ Normal maces are disabled!")
-                        .color(NamedTextColor.RED));
                 return;
             }
 
-            // Block elemental maces in crafter result slots
             if (event.getInventory().getType() == InventoryType.CRAFTER && isElementalMace(currentItem)) {
                 event.setCancelled(true);
-                player.sendMessage(Component.text("❌ Elemental maces cannot be crafted in crafter blocks!")
-                        .color(NamedTextColor.RED));
                 return;
             }
         }
 
-        // Monitor crafter blocks when players interact with them
+        // Monitor crafter blocks
         if (event.getInventory().getHolder() instanceof Crafter) {
             Block crafterBlock = ((Crafter) event.getInventory().getHolder()).getBlock();
             monitoredCrafters.add(crafterBlock);
-
-            // Schedule immediate check
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    checkCrafterForProhibitedMaces(crafterBlock);
-                }
-            }.runTaskLater(plugin, 1L);
         }
     }
 
-    // ================== HOPPER/DROPPER PREVENTION ==================
+    // ================== PREVENT AUTOMATED SYSTEMS ==================
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onInventoryMoveItem(InventoryMoveItemEvent event) {
@@ -174,27 +151,7 @@ public class CraftingRestrictionListener implements Listener {
             event.setCancelled(true);
             return;
         }
-
-        // Monitor heavy core movements to crafters (for vanilla mace prevention)
-        if (item.getType() == Material.HEAVY_CORE) {
-            Inventory destination = event.getDestination();
-
-            if (destination.getHolder() instanceof Crafter) {
-                Block crafterBlock = ((Crafter) destination.getHolder()).getBlock();
-                monitoredCrafters.add(crafterBlock);
-
-                // Schedule check after movement
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        checkCrafterForProhibitedMaces(crafterBlock);
-                    }
-                }.runTaskLater(plugin, 2L);
-            }
-        }
     }
-
-    // ================== DISPENSER PREVENTION ==================
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onBlockDispense(BlockDispenseEvent event) {
@@ -202,71 +159,26 @@ public class CraftingRestrictionListener implements Listener {
 
         if (isVanillaMace(item) || isElementalMace(item)) {
             event.setCancelled(true);
-
-            // Remove the prohibited mace from the dispenser
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    removeProhibitedMacesFromInventory(event.getBlock().getState());
-                }
-            }.runTaskLater(plugin, 1L);
         }
     }
 
-    // ================== ITEM SPAWN/DROP PREVENTION ==================
-
-    @EventHandler(priority = EventPriority.HIGHEST)
-    public void onItemSpawn(ItemSpawnEvent event) {
-        Item item = event.getEntity();
-        ItemStack itemStack = item.getItemStack();
-
-        if (isVanillaMace(itemStack)) {
-            // Check if this is from a crafter or other automated source
-            if (item.getThrower() == null) { // No player threw this
-                event.setCancelled(true);
-                plugin.getLogger().warning("Blocked vanilla mace spawn at " +
-                        item.getLocation().getBlockX() + ", " +
-                        item.getLocation().getBlockY() + ", " +
-                        item.getLocation().getBlockZ());
-            }
-        } else if (isElementalMace(itemStack)) {
-            // Check if this elemental mace came from a crafter (shouldn't happen)
-            if (item.getThrower() == null) {
-                // Check if there's a crafter nearby that might have created this
-                Block nearbyBlock = item.getLocation().getBlock();
-                for (int x = -2; x <= 2; x++) {
-                    for (int y = -2; y <= 2; y++) {
-                        for (int z = -2; z <= 2; z++) {
-                            Block checkBlock = nearbyBlock.getRelative(x, y, z);
-                            if (checkBlock.getType() == Material.CRAFTER) {
-                                event.setCancelled(true);
-                                plugin.getLogger().warning("Blocked elemental mace spawn from crafter at " +
-                                        item.getLocation().getBlockX() + ", " +
-                                        item.getLocation().getBlockY() + ", " +
-                                        item.getLocation().getBlockZ());
-                                return;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // ================== CHUNK LOAD MONITORING ==================
+    // ================== CHUNK MONITORING ==================
 
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent event) {
-        // Schedule a check for any crafters in the loaded chunk
         new BukkitRunnable() {
             @Override
             public void run() {
-                for (BlockState tileEntity : event.getChunk().getTileEntities()) {
-                    if (tileEntity instanceof Crafter) {
-                        Block crafterBlock = tileEntity.getBlock();
-                        monitoredCrafters.add(crafterBlock);
-                        checkCrafterForProhibitedMaces(crafterBlock);
+                try {
+                    for (BlockState tileEntity : event.getChunk().getTileEntities()) {
+                        if (tileEntity instanceof Crafter) {
+                            Block crafterBlock = tileEntity.getBlock();
+                            monitoredCrafters.add(crafterBlock);
+                            checkCrafterForProhibitedMaces(crafterBlock);
+                        }
                     }
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Error checking crafters in chunk: " + e.getMessage());
                 }
             }
         }.runTaskLater(plugin, 5L);
@@ -274,22 +186,16 @@ public class CraftingRestrictionListener implements Listener {
 
     // ================== UTILITY METHODS ==================
 
-    /**
-     * Checks if an ItemStack is a vanilla mace (no custom data)
-     */
     private boolean isVanillaMace(ItemStack item) {
         if (item == null || item.getType() != Material.MACE) {
             return false;
         }
 
-        // If it has no meta, it's definitely vanilla
         if (!item.hasItemMeta()) {
             return true;
         }
 
         ItemMeta meta = item.getItemMeta();
-
-        // If it has no display name or lore, it's vanilla
         if (meta.displayName() == null && (!meta.hasLore() || meta.lore().isEmpty())) {
             return true;
         }
@@ -297,111 +203,95 @@ public class CraftingRestrictionListener implements Listener {
         return false;
     }
 
-    /**
-     * Checks if an ItemStack is an elemental mace (custom mace)
-     */
     private boolean isElementalMace(ItemStack item) {
         if (item == null || item.getType() != Material.MACE) {
             return false;
         }
-
         return maceManager.isCustomMace(item);
     }
 
-    /**
-     * Removes prohibited maces from any inventory
-     */
-    private void removeProhibitedMacesFromInventory(BlockState blockState) {
-        if (blockState instanceof InventoryHolder) {
-            Inventory inventory = ((InventoryHolder) blockState).getInventory();
-
-            for (int i = 0; i < inventory.getSize(); i++) {
-                ItemStack item = inventory.getItem(i);
-                if (isVanillaMace(item) || (isElementalMace(item) && blockState instanceof Crafter)) {
-                    inventory.setItem(i, null);
-                    plugin.getLogger().info("Removed prohibited mace from " + blockState.getType() +
-                            " at " + blockState.getLocation());
-                }
-            }
-        }
-    }
-
-    /**
-     * Checks a crafter for prohibited maces and removes them
-     */
     private void checkCrafterForProhibitedMaces(Block crafterBlock) {
-        if (crafterBlock.getType() != Material.CRAFTER) {
-            monitoredCrafters.remove(crafterBlock);
-            return;
-        }
-
-        BlockState blockState = crafterBlock.getState();
-        if (!(blockState instanceof Crafter)) {
-            monitoredCrafters.remove(crafterBlock);
-            return;
-        }
-
-        Crafter crafter = (Crafter) blockState;
-        Inventory inventory = crafter.getInventory();
-
-        // Check result slot (slot 9 in crafter inventory)
-        ItemStack result = inventory.getItem(9);
-        if (isVanillaMace(result) || isElementalMace(result)) {
-            inventory.setItem(9, null);
-            plugin.getLogger().info("Removed prohibited mace from crafter result slot at " +
-                    crafterBlock.getLocation());
-        }
-
-        // Check all other slots for prohibited maces
-        for (int i = 0; i < 9; i++) { // Crafting matrix slots
-            ItemStack item = inventory.getItem(i);
-            if (isVanillaMace(item) || isElementalMace(item)) {
-                inventory.setItem(i, null);
-                plugin.getLogger().info("Removed prohibited mace from crafter crafting slot at " +
-                        crafterBlock.getLocation());
+        try {
+            if (crafterBlock == null || crafterBlock.getType() != Material.CRAFTER) {
+                monitoredCrafters.remove(crafterBlock);
+                return;
             }
-        }
 
-        // Also check for elemental mace recipe patterns and disrupt them
-        checkAndDisruptElementalMacePatterns(inventory, crafterBlock);
-    }
+            BlockState blockState = crafterBlock.getState();
+            if (!(blockState instanceof Crafter)) {
+                monitoredCrafters.remove(crafterBlock);
+                return;
+            }
 
-    /**
-     * Check for and disrupt elemental mace recipe patterns in crafter
-     */
-    private void checkAndDisruptElementalMacePatterns(Inventory crafterInventory, Block crafterBlock) {
-        ItemStack[] matrix = new ItemStack[9];
-        for (int i = 0; i < 9; i++) {
-            matrix[i] = crafterInventory.getItem(i);
-        }
+            Crafter crafter = (Crafter) blockState;
+            Inventory inventory = crafter.getInventory();
 
-        // Check if this looks like any elemental mace recipe
-        if (looksLikeElementalMaceRecipe(matrix)) {
-            // Disrupt the recipe by removing a key component (heavy core first, then breeze rod)
-            for (int i = 0; i < 9; i++) {
-                if (matrix[i] != null && matrix[i].getType() == Material.HEAVY_CORE) {
-                    crafterInventory.setItem(i, null);
-                    plugin.getLogger().warning("SECURITY: Disrupted elemental mace recipe pattern (removed Heavy Core) in crafter at " + crafterBlock.getLocation());
-                    return;
+            if (inventory == null || inventory.getSize() < 9) {
+                monitoredCrafters.remove(crafterBlock);
+                return;
+            }
+
+            // Clear result slot if it has prohibited items
+            if (inventory.getSize() >= 10) {
+                ItemStack result = inventory.getItem(9);
+                if (isVanillaMace(result) || isElementalMace(result)) {
+                    inventory.setItem(9, null);
                 }
             }
-            for (int i = 0; i < 9; i++) {
-                if (matrix[i] != null && matrix[i].getType() == Material.BREEZE_ROD) {
-                    crafterInventory.setItem(i, null);
-                    plugin.getLogger().warning("SECURITY: Disrupted elemental mace recipe pattern (removed Breeze Rod) in crafter at " + crafterBlock.getLocation());
-                    return;
-                }
+
+            // Check crafting matrix and disrupt prohibited patterns
+            checkAndDisruptProhibitedPatterns(inventory, crafterBlock);
+
+        } catch (Exception e) {
+            plugin.getLogger().warning("Error checking crafter at " +
+                    (crafterBlock != null ? crafterBlock.getLocation() : "unknown") + ": " + e.getMessage());
+            if (crafterBlock != null) {
+                monitoredCrafters.remove(crafterBlock);
             }
         }
     }
 
-    /**
-     * Check if the crafting matrix looks like an elemental mace recipe
-     */
-    private boolean looksLikeElementalMaceRecipe(ItemStack[] matrix) {
-        if (matrix.length != 9) return false;
+    private void checkAndDisruptProhibitedPatterns(Inventory crafterInventory, Block crafterBlock) {
+        try {
+            if (crafterInventory.getSize() < 9) return;
 
-        // All elemental maces require heavy core and breeze rod
+            ItemStack[] matrix = new ItemStack[9];
+            for (int i = 0; i < 9; i++) {
+                matrix[i] = crafterInventory.getItem(i);
+            }
+
+            // Check for vanilla mace pattern (heavy core + breeze rod)
+            if (hasVanillaMacePattern(matrix)) {
+                // Remove heavy core to disrupt vanilla mace crafting
+                for (int i = 0; i < 9; i++) {
+                    if (matrix[i] != null && matrix[i].getType() == Material.HEAVY_CORE) {
+                        crafterInventory.setItem(i, null);
+                        plugin.getLogger().info("Disrupted vanilla mace recipe in crafter at " + crafterBlock.getLocation());
+                        return;
+                    }
+                }
+            }
+
+            // Check for elemental mace patterns
+            if (hasElementalMacePattern(matrix)) {
+                // Remove breeze rod to disrupt elemental mace crafting in crafter
+                for (int i = 0; i < 9; i++) {
+                    if (matrix[i] != null && matrix[i].getType() == Material.BREEZE_ROD) {
+                        crafterInventory.setItem(i, null);
+                        plugin.getLogger().info("Disrupted elemental mace recipe in crafter at " + crafterBlock.getLocation());
+                        return;
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            plugin.getLogger().warning("Error checking patterns at " + crafterBlock.getLocation() + ": " + e.getMessage());
+        }
+    }
+
+    private boolean hasVanillaMacePattern(ItemStack[] matrix) {
+        if (matrix == null || matrix.length != 9) return false;
+
         boolean hasHeavyCore = false;
         boolean hasBreezeRod = false;
 
@@ -418,39 +308,54 @@ public class CraftingRestrictionListener implements Listener {
         return hasHeavyCore && hasBreezeRod;
     }
 
-    /**
-     * Starts the periodic crafter monitoring system
-     */
+    private boolean hasElementalMacePattern(ItemStack[] matrix) {
+        // Same as vanilla for now since both use heavy core + breeze rod
+        return hasVanillaMacePattern(matrix);
+    }
+
     private void startCrafterMonitoring() {
         new BukkitRunnable() {
             @Override
             public void run() {
-                // Create a copy to avoid concurrent modification
-                Set<Block> craftersToCheck = new HashSet<>(monitoredCrafters);
+                try {
+                    Set<Block> craftersToCheck = new HashSet<>(monitoredCrafters);
 
-                for (Block crafterBlock : craftersToCheck) {
-                    checkCrafterForProhibitedMaces(crafterBlock);
+                    for (Block crafterBlock : craftersToCheck) {
+                        try {
+                            checkCrafterForProhibitedMaces(crafterBlock);
+                        } catch (Exception e) {
+                            monitoredCrafters.remove(crafterBlock);
+                        }
+                    }
+
+                    // Clean up invalid blocks
+                    monitoredCrafters.removeIf(block -> {
+                        try {
+                            return block.getType() != Material.CRAFTER;
+                        } catch (Exception e) {
+                            return true;
+                        }
+                    });
+                } catch (Exception e) {
+                    plugin.getLogger().severe("Critical error in crafter monitoring: " + e.getMessage());
                 }
-
-                // Clean up invalid blocks
-                monitoredCrafters.removeIf(block -> block.getType() != Material.CRAFTER);
             }
-        }.runTaskTimer(plugin, 20L, 10L); // Check every 0.5 seconds
+        }.runTaskTimer(plugin, 20L, 40L);
     }
 
-    /**
-     * Public method to force check all known crafters (for admin commands)
-     */
+    // ================== PUBLIC METHODS ==================
+
     public void forceCheckAllCrafters() {
         Set<Block> craftersToCheck = new HashSet<>(monitoredCrafters);
         for (Block crafterBlock : craftersToCheck) {
-            checkCrafterForProhibitedMaces(crafterBlock);
+            try {
+                checkCrafterForProhibitedMaces(crafterBlock);
+            } catch (Exception e) {
+                plugin.getLogger().warning("Error in forced crafter check: " + e.getMessage());
+            }
         }
     }
 
-    /**
-     * Public method to get the number of monitored crafters (for debugging)
-     */
     public int getMonitoredCrafterCount() {
         return monitoredCrafters.size();
     }

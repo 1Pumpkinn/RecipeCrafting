@@ -2,8 +2,6 @@ package rc.maces.recipes.impl;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -18,7 +16,7 @@ public class EarthmaceRecipe implements CustomRecipe {
     private final JavaPlugin plugin;
     private final rc.maces.managers.MaceManager maceManager;
     private final NamespacedKey recipeKey;
-    private final ShapedRecipe bukkitRecipe;
+    private ShapedRecipe bukkitRecipe;
 
     public EarthmaceRecipe(JavaPlugin plugin, rc.maces.managers.MaceManager maceManager) {
         this.plugin = plugin;
@@ -28,19 +26,65 @@ public class EarthmaceRecipe implements CustomRecipe {
     }
 
     private ShapedRecipe createRecipe() {
-        // Create the actual earth mace using MaceManager
-        ItemStack result = maceManager.createEarthMace();
+        try {
+            // Create the actual earth mace using MaceManager
+            ItemStack result = maceManager.createEarthMace();
 
-        ShapedRecipe recipe = new ShapedRecipe(recipeKey, result);
-        recipe.shape("MSM", "PHP", "DBD");
-        recipe.setIngredient('M', Material.MOSS_BLOCK);
-        recipe.setIngredient('S', Material.SCULK_CATALYST);
-        recipe.setIngredient('P', Material.PINK_WOOL);
-        recipe.setIngredient('H', Material.HEAVY_CORE);
-        recipe.setIngredient('B', Material.BREEZE_ROD);
-        recipe.setIngredient('D', Material.DEEPSLATE_EMERALD_ORE);
+            if (result == null || result.getType() == Material.AIR) {
+                plugin.getLogger().severe("EarthMace result item is null or AIR!");
+                return null;
+            }
 
-        return recipe;
+            // Validate all materials exist before creating recipe
+            if (!validateMaterials()) {
+                plugin.getLogger().severe("One or more materials for EarthMace recipe don't exist!");
+                return null;
+            }
+
+            ShapedRecipe recipe = new ShapedRecipe(recipeKey, result);
+
+            // Set the pattern - ensure it's exactly 3 rows of 3 characters each
+            recipe.shape(
+                    "MSM",
+                    "PHP",
+                    "DBD"
+            );
+
+            // Set ingredients with error checking
+            recipe.setIngredient('M', Material.MOSS_BLOCK);
+            recipe.setIngredient('S', Material.SCULK_CATALYST);
+            recipe.setIngredient('P', Material.PINK_WOOL);
+            recipe.setIngredient('H', Material.HEAVY_CORE);
+            recipe.setIngredient('B', Material.BREEZE_ROD);
+            recipe.setIngredient('D', Material.DEEPSLATE_EMERALD_ORE);
+
+            plugin.getLogger().info("Successfully created EarthMace recipe");
+            return recipe;
+
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error creating EarthMace recipe: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private boolean validateMaterials() {
+        Material[] requiredMaterials = {
+                Material.MOSS_BLOCK,
+                Material.SCULK_CATALYST,
+                Material.PINK_WOOL,
+                Material.HEAVY_CORE,
+                Material.BREEZE_ROD,
+                Material.DEEPSLATE_EMERALD_ORE
+        };
+
+        for (Material material : requiredMaterials) {
+            if (material == null) {
+                plugin.getLogger().severe("Material is null in EarthMace recipe validation");
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
@@ -60,9 +104,18 @@ public class EarthmaceRecipe implements CustomRecipe {
 
     @Override
     public void onCraft(Player player) {
-        // Give the player the earth mace directly
-        player.getInventory().addItem(maceManager.createEarthMace());
-        player.sendMessage(Component.text("🌍 You crafted an Earth Mace!")
-                .color(NamedTextColor.GREEN));
+        try {
+            ItemStack earthMace = maceManager.createEarthMace();
+            if (earthMace != null && earthMace.getType() != Material.AIR) {
+                player.getInventory().addItem(earthMace);
+                player.sendMessage(Component.text("🌍 You crafted an Earth Mace!")
+                        .color(NamedTextColor.GREEN));
+            } else {
+                plugin.getLogger().severe("Failed to create EarthMace for player: " + player.getName());
+            }
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error in EarthMace onCraft: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }
