@@ -1,0 +1,310 @@
+name: RecipeCrafting
+version: '2.0-SNAPSHOT'
+main: rc.maces.Main
+api-version: '1.21'
+description: Elemental maces with combat system and safe zones
+author: ___Pumpkinn
+website: https://ko-fi.com/1pumpkinn
+depend: []
+load: STARTUP
+
+commands:
+  # ===== MACE GIVING COMMANDS (Admin Only) =====
+  airmace:
+    description: Give an air mace to a player
+    usage: /<command> <player>
+    permission: maces.admin
+    permission-message: "&cYou must be an admin to give air maces!"
+
+  firemace:
+    description: Give a fire mace to a player
+    usage: /<command> <player>
+    permission: maces.admin
+    permission-message: "&cYou must be an admin to give fire maces!"
+
+  watermace:
+    description: Give a water mace to a player
+    usage: /<command> <player>
+    permission: maces.admin
+    permission-message: "&cYou must be an admin to give water maces!"
+
+  earthmace:
+    description: Give an earth mace to a player
+    usage: /<command> <player>
+    permission: maces.admin
+    permission-message: "&cYou must be an admin to give earth maces!"
+
+  # ===== ELEMENT MANAGEMENT COMMANDS =====
+  element:
+    description: Admin command to manage player elements or view element info
+    usage: /<command> <check|set|info|list> [player] [element]
+    permission: maces.admin
+    permission-message: "&cYou must be an admin to use element commands!"
+    aliases: [el, elem]
+
+  reroll:
+    description: Reroll your element or another player's element
+    usage: /<command> [player]
+    permission: maces.admin
+    permission-message: "&cYou must be an admin to reroll elements!"
+    aliases: [elementreroll, rerollelement]
+
+  myelement:
+    description: Check your current element and abilities
+    usage: /<command>
+    aliases: [myel, element-info, elementinfo]
+
+  # ===== MACE CRAFTING & STATUS COMMANDS =====
+  craftedmaces:
+    description: Check your crafted maces inventory
+    usage: /<command>
+    aliases: [maces, maceinv, maceinventory]
+
+  resetmaces:
+    description: Reset mace crafting limits for yourself or another player
+    usage: /<command> [player] [mace_type]
+    permission: maces.admin
+    permission-message: "&cYou must be an admin to reset mace crafting limits!"
+    aliases: [resetmace, macereset, clearmaces]
+
+  macestatus:
+    description: View server-wide mace crafting status
+    usage: /<command>
+    aliases: [mstatus, servermaces, globalstatus]
+
+  scanmaces:
+    description: Scan all players for existing maces
+    usage: /<command>
+    permission: maces.admin
+    permission-message: "&cYou must be an admin to scan maces!"
+
+  # ===== COMBAT SYSTEM COMMANDS =====
+  combat:
+    description: Check combat status or manage combat (admin)
+    usage: /<command> [list|remove|force|status|safezone|commands|help] [player] [reason]
+    permission: maces.combat
+    permission-message: "&cYou don't have permission to use this command!"
+
+  # ===== SAFE ZONE COMMANDS =====
+  safezone:
+    description: Manage safe zones where combat is disabled
+    usage: /<command> <pos1|pos2|create|remove|list|info|tp|clear> [args...]
+    permission: maces.safezone
+    permission-message: "&cYou don't have permission to use safe zone commands!"
+    aliases: [sz, safezones, combatzone]
+
+  # ===== TRUST SYSTEM COMMANDS =====
+  trust:
+    description: Send a trust request to another player
+    usage: /<command> <player>
+    permission: maces.trust
+    permission-message: "&cYou don't have permission to use the trust system!"
+
+  untrust:
+    description: Remove trust with another player
+    usage: /<command> <player>
+    permission: maces.trust
+    permission-message: "&cYou don't have permission to use the trust system!"
+    aliases: [distrust, removetrust]
+
+  trustlist:
+    description: List all your trusted allies
+    usage: /<command>
+    permission: maces.trust
+    permission-message: "&cYou don't have permission to use the trust system!"
+    aliases: [allies, trustallies, trustedplayers]
+
+  trustaccept:
+    description: Accept a pending trust request
+    usage: /<command> [player]
+    permission: maces.trust
+    permission-message: "&cYou don't have permission to use the trust system!"
+    aliases: [accepttrust, trustyes]
+
+  trustdeny:
+    description: Deny a pending trust request
+    usage: /<command> [player]
+    permission: maces.trust
+    permission-message: "&cYou don't have permission to use the trust system!"
+    aliases: [denytrust, rejecttrust, trustno]
+
+  # ===== DEBUG & SECURITY COMMANDS (Admin Only) =====
+  trustdebug:
+    description: Debug and test trust system functionality
+    usage: /<command> <status|check|test> [args...]
+    permission: maces.admin
+    permission-message: "&cYou must be an admin to use trust debug commands!"
+    aliases: [tdebug, trustcheck]
+
+  macesecurity:
+    description: Monitor and manage mace security systems
+    usage: /<command> [status|scan|help]
+    permission: maces.admin
+    permission-message: "&cYou must be an admin to use security commands!"
+    aliases: [msecurity, macesec, securitycheck]
+
+  # ===== UTILITY COMMANDS =====
+  macehelp:
+    description: Show help information for mace commands
+    usage: /<command> [topic]
+    aliases: [maceinfo, rhelp]
+
+permissions:
+  # ===== ADMIN PERMISSIONS =====
+  maces.admin:
+    description: Full admin access to all mace systems
+    default: op
+    children:
+      maces.give.*: true
+      maces.element.admin: true
+      maces.reset.others: true
+      maces.security: true
+      maces.trust.debug: true
+      maces.safezone.admin: true
+      maces.combat.admin: true
+      maces.player: true
+
+  # ===== ELEMENT PERMISSIONS =====
+  maces.element.admin:
+    description: Allows managing all player elements
+    default: op
+    children:
+      maces.element.set: true
+      maces.element.reroll: true
+      maces.element.reroll.others: true
+
+  maces.element.set:
+    description: Allows setting player elements
+    default: op
+
+  maces.element.reroll:
+    description: Allows rerolling own element
+    default: op
+
+  maces.element.reroll.others:
+    description: Allows rerolling other players' elements
+    default: op
+
+  # ===== MACE GIVING PERMISSIONS =====
+  maces.give.*:
+    description: Allows giving all types of maces
+    default: op
+    children:
+      maces.give.air: true
+      maces.give.fire: true
+      maces.give.water: true
+      maces.give.earth: true
+
+  maces.give.air:
+    description: Allows giving air maces
+    default: op
+
+  maces.give.fire:
+    description: Allows giving fire maces
+    default: op
+
+  maces.give.water:
+    description: Allows giving water maces
+    default: op
+
+  maces.give.earth:
+    description: Allows giving earth maces
+    default: op
+
+  # ===== COMBAT PERMISSIONS =====
+  maces.combat:
+    description: Allows basic combat status checking
+    default: true
+
+  maces.combat.admin:
+    description: Allows managing combat for other players
+    default: op
+    children:
+      maces.combat: true
+
+  # ===== SAFE ZONE PERMISSIONS =====
+  maces.safezone:
+    description: Allows basic safe zone commands (info, list)
+    default: true
+    children:
+      maces.safezone.info: true
+      maces.safezone.list: true
+
+  maces.safezone.admin:
+    description: Allows creating and managing safe zones
+    default: op
+    children:
+      maces.safezone: true
+      maces.safezone.create: true
+      maces.safezone.remove: true
+      maces.safezone.tp: true
+      maces.safezone.clear: true
+
+  maces.safezone.info:
+    description: Allows checking safe zone information
+    default: true
+
+  maces.safezone.list:
+    description: Allows listing safe zones
+    default: true
+
+  maces.safezone.create:
+    description: Allows creating safe zones
+    default: op
+
+  maces.safezone.remove:
+    description: Allows removing safe zones
+    default: op
+
+  maces.safezone.tp:
+    description: Allows teleporting to safe zones
+    default: op
+
+  maces.safezone.clear:
+    description: Allows clearing position selections
+    default: op
+
+  # ===== TRUST SYSTEM PERMISSIONS =====
+  maces.trust:
+    description: Allows using the trust system
+    default: true
+
+  maces.trust.debug:
+    description: Allows using trust debug commands
+    default: op
+
+  # ===== UTILITY PERMISSIONS =====
+  maces.security:
+    description: Allows using mace security monitoring commands
+    default: op
+
+  maces.reset.others:
+    description: Allows resetting other players' mace crafting limits
+    default: op
+
+  # ===== PLAYER PERMISSIONS =====
+  maces.use:
+    description: Allows using mace abilities
+    default: true
+
+  maces.craft:
+    description: Allows crafting maces
+    default: true
+
+  # ===== PERMISSION GROUPS =====
+  maces.player:
+    description: Standard player permissions for mace usage
+    default: true
+    children:
+      maces.use: true
+      maces.craft: true
+      maces.trust: true
+      maces.safezone: true
+      maces.combat: true
+
+  maces.*:
+    description: All mace-related permissions (super admin)
+    default: op
+    children:
+      maces.admin: true
+      maces.player: true
