@@ -53,11 +53,14 @@ public class Main extends JavaPlugin {
         // Initialize combat command blocker
         combatCommandBlocker = new CombatCommandBlocker(combatTimer);
 
+        StoneElementListener stoneElementListener = new StoneElementListener(elementManager, this);
+
         // Register mace commands
         getCommand("airmace").setExecutor(new AirmaceCommand(maceManager));
         getCommand("firemace").setExecutor(new FiremaceCommand(maceManager));
         getCommand("watermace").setExecutor(new WatermaceCommand(maceManager));
         getCommand("earthmace").setExecutor(new EarthmaceCommand(maceManager));
+        getCommand("stone").setExecutor(new StoneCommand(elementManager));
 
         // Register element commands
         getCommand("element").setExecutor(new ElementCommand(elementManager));

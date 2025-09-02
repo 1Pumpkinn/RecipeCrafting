@@ -33,6 +33,10 @@ commands:
     usage: /<command> <player>
     permission: maces.admin
     permission-message: "&cYou must be an admin to give earth maces!"
+  stone:
+    description: Award Stone element to a player (building competition reward)
+    usage: /stone <player>
+    permission: maces.stone
 
   # ===== ELEMENT MANAGEMENT COMMANDS =====
   element:
@@ -262,6 +266,10 @@ permissions:
 
   maces.safezone.clear:
     description: Allows clearing position selections
+    default: op
+
+  maces.stone:
+    description: Allows awarding Stone element to players
     default: op
 
   # ===== TRUST SYSTEM PERMISSIONS =====

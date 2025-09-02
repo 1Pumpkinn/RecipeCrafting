@@ -4,15 +4,19 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -31,8 +35,9 @@ public class ElementManager {
     public static final String WATER = "WATER";
     public static final String EARTH = "EARTH";
     public static final String AIR = "AIR";
+    public static final String STONE = "STONE";
 
-    private static final String[] ELEMENTS = {FIRE, WATER, EARTH, AIR};
+    private static final String[] ELEMENTS = {FIRE, WATER, EARTH, AIR, STONE};
 
     public ElementManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -108,7 +113,7 @@ public class ElementManager {
         // Check if player already has an element
         if (playerElements.containsKey(playerId)) {
             String existingElement = playerElements.get(playerId);
-            // FIXED: Send simple welcome back message without mace abilities spam
+            // Send simple welcome back message without mace abilities spam
             player.sendMessage(Component.text("🌟 Welcome back! Your element is ")
                     .color(NamedTextColor.GOLD)
                     .append(Component.text(getElementDisplayName(existingElement))
@@ -152,7 +157,7 @@ public class ElementManager {
         playerElements.put(playerId, maceElement);
         saveElementData();
 
-        // FIXED: Send simple notification without mace abilities spam
+        // Send simple notification without mace abilities spam
         player.sendMessage(Component.text("⚡ Your element changed to ")
                 .color(NamedTextColor.YELLOW)
                 .append(Component.text(getElementDisplayName(maceElement))
@@ -188,7 +193,7 @@ public class ElementManager {
         new BukkitRunnable() {
             int tickCount = 0;
             final int totalTicks = 60;
-            String currentElement = ELEMENTS[0];
+            String currentElement = FIRE; // Start with Fire
 
             @Override
             public void run() {
@@ -198,12 +203,14 @@ public class ElementManager {
                 int changeInterval = Math.max(2, tickCount / 5);
 
                 if (tickCount % changeInterval == 0) {
+                    // Only roll through basic elements, not Stone
+                    String[] rollElements = {FIRE, WATER, EARTH, AIR};
                     if (rerolling && oldElement != null) {
                         do {
-                            currentElement = ELEMENTS[random.nextInt(ELEMENTS.length)];
+                            currentElement = rollElements[random.nextInt(rollElements.length)];
                         } while (currentElement.equals(oldElement) && random.nextDouble() < 0.7);
                     } else {
-                        currentElement = ELEMENTS[random.nextInt(ELEMENTS.length)];
+                        currentElement = rollElements[random.nextInt(rollElements.length)];
                     }
 
                     Component rollingMessage = Component.text("🎲 Rolling... ")
@@ -239,14 +246,15 @@ public class ElementManager {
     private void finalizeElementAssignment(Player player, boolean isReroll, String oldElement) {
         final UUID playerId = player.getUniqueId();
 
-        // Assign final random element
+        // Assign final random element (excluding Stone)
+        String[] rollElements = {FIRE, WATER, EARTH, AIR};
         String finalElement;
         if (isReroll && oldElement != null) {
             do {
-                finalElement = ELEMENTS[random.nextInt(ELEMENTS.length)];
+                finalElement = rollElements[random.nextInt(rollElements.length)];
             } while (finalElement.equals(oldElement));
         } else {
-            finalElement = ELEMENTS[random.nextInt(ELEMENTS.length)];
+            finalElement = rollElements[random.nextInt(rollElements.length)];
         }
 
         playerElements.put(playerId, finalElement);
@@ -262,7 +270,7 @@ public class ElementManager {
         final String resultElement = finalElement;
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            // FIXED: Send simple assignment message without mace abilities spam
+            // Send simple assignment message without mace abilities spam
             Component finalMessage = rerolling ?
                     Component.text("🎲 ELEMENT REROLLED! ")
                             .color(NamedTextColor.GOLD)
@@ -301,7 +309,124 @@ public class ElementManager {
         }, 10L);
     }
 
-    // ------------------ utility methods ------------------
+    // ------------------ Stone Element Methods ------------------
+
+    /**
+     * Assigns Stone element to a player (admin only)
+     */
+    public void assignStoneElement(Player player) {
+        UUID playerId = player.getUniqueId();
+        String oldElement = playerElements.get(playerId);
+
+        playerElements.put(playerId, STONE);
+        saveElementData();
+
+        // Give them a stone core
+        ItemStack stoneCore = createStoneCore();
+        player.getInventory().addItem(stoneCore);
+
+        player.sendMessage(Component.text("🗿 CONGRATULATIONS! 🗿")
+                .color(NamedTextColor.GOLD)
+                .decoration(TextDecoration.BOLD, true));
+        player.sendMessage(Component.text("You have been awarded the Stone Element!")
+                .color(NamedTextColor.GRAY));
+        player.sendMessage(Component.text("You received a Stone Core - keep it safe!")
+                .color(NamedTextColor.YELLOW));
+
+        Component title = Component.text("STONE ELEMENT AWARDED!")
+                .color(NamedTextColor.GRAY)
+                .decoration(TextDecoration.BOLD, true);
+        Component subtitle = Component.text("🗿 Stone 🗿")
+                .color(NamedTextColor.GRAY)
+                .decoration(TextDecoration.BOLD, true);
+
+        player.showTitle(net.kyori.adventure.title.Title.title(title, subtitle));
+
+        plugin.getLogger().info("Assigned Stone element to " + player.getName() + " (previous: " +
+                (oldElement != null ? oldElement : "NONE") + ")");
+    }
+
+    /**
+     * Creates a Stone Core item
+     */
+    public ItemStack createStoneCore() {
+        ItemStack core = new ItemStack(Material.ECHO_SHARD);
+        ItemMeta meta = core.getItemMeta();
+
+        meta.displayName(Component.text("Stone Core")
+                .color(NamedTextColor.GRAY)
+                .decoration(TextDecoration.BOLD, true));
+
+        meta.lore(Arrays.asList(
+                Component.text("🗿 Proof of Stone Element mastery")
+                        .color(NamedTextColor.DARK_GRAY),
+                Component.text("🗿 Dropped on death - causes element reroll")
+                        .color(NamedTextColor.DARK_GRAY),
+                Component.text("🗿 Keep this safe!")
+                        .color(NamedTextColor.GRAY)
+        ));
+
+        core.setItemMeta(meta);
+        return core;
+    }
+
+    /**
+     * Checks if an item is a Stone Core
+     */
+    public boolean isStoneCore(ItemStack item) {
+        if (item == null || item.getType() != Material.ECHO_SHARD) return false;
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null || meta.displayName() == null) return false;
+        return meta.displayName().toString().contains("Stone Core");
+    }
+
+    /**
+     * Handles Stone Core drop on death and immediate reroll
+     */
+    public void handleStoneCoreDrop(Player player) {
+        String playerElement = getPlayerElement(player);
+        if (!"STONE".equals(playerElement)) return;
+
+        // Drop stone core at death location
+        ItemStack stoneCore = createStoneCore();
+        player.getWorld().dropItemNaturally(player.getLocation(), stoneCore);
+
+        // Reroll their element immediately (no 5-minute wait)
+        rerollPlayerElementImmediate(player);
+
+        player.sendMessage(Component.text("💀 You died and lost your Stone Element!")
+                .color(NamedTextColor.RED));
+        player.sendMessage(Component.text("🗿 Your Stone Core was dropped!")
+                .color(NamedTextColor.GRAY));
+        player.sendMessage(Component.text("⚡ Your element has been rerolled!")
+                .color(NamedTextColor.YELLOW));
+    }
+
+    /**
+     * Immediate reroll (no animation for Stone death)
+     */
+    private void rerollPlayerElementImmediate(Player player) {
+        UUID playerId = player.getUniqueId();
+        String oldElement = playerElements.get(playerId);
+
+        // Get random element (excluding Stone)
+        String[] nonStoneElements = {FIRE, WATER, EARTH, AIR};
+        String newElement = nonStoneElements[random.nextInt(nonStoneElements.length)];
+
+        playerElements.put(playerId, newElement);
+        saveElementData();
+
+        player.sendMessage(Component.text("⚡ New element assigned: ")
+                .color(NamedTextColor.GOLD)
+                .append(Component.text(getElementDisplayName(newElement))
+                        .color(getElementColor(newElement))
+                        .decoration(TextDecoration.BOLD, true)));
+
+        plugin.getLogger().info("Stone element death reroll: " + player.getName() +
+                " from STONE to " + newElement);
+    }
+
+    // ------------------ Utility Methods ------------------
 
     public String getPlayerElement(Player player) {
         return playerElements.get(player.getUniqueId());
@@ -322,6 +447,8 @@ public class ElementManager {
                 return "🌍 Earth";
             case AIR:
                 return "💨 Air";
+            case STONE:
+                return "🗿 Stone";
             default:
                 return "Unknown";
         }
@@ -337,6 +464,8 @@ public class ElementManager {
                 return NamedTextColor.GREEN;
             case AIR:
                 return NamedTextColor.WHITE;
+            case STONE:
+                return NamedTextColor.GRAY;
             default:
                 return NamedTextColor.GRAY;
         }
@@ -420,6 +549,19 @@ public class ElementManager {
                         .appendNewline()
                         .append(Component.text("• Hit gives slow falling").color(NamedTextColor.GRAY));
                 break;
+            case STONE:
+                elementSpecific = Component.text("🗿 ABILITIES:").color(NamedTextColor.GRAY).decoration(TextDecoration.BOLD, true)
+                        .appendNewline()
+                        .append(Component.text("• Special reward element from building competition").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("🗿 PASSIVES:").color(NamedTextColor.GRAY).decoration(TextDecoration.BOLD, true))
+                        .appendNewline()
+                        .append(Component.text("• Permanent Resistance 1").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("• 1% chance for Resistance 5 when hit (5 seconds)").color(NamedTextColor.GRAY))
+                        .appendNewline()
+                        .append(Component.text("• Drops Stone Core on death and rerolls element").color(NamedTextColor.GRAY));
+                break;
             default:
                 elementSpecific = Component.text("Unknown element").color(NamedTextColor.GRAY);
                 break;
@@ -448,6 +590,8 @@ public class ElementManager {
                 .appendNewline()
                 .append(Component.text("💨 Air - Speed 1, No fall damage, Wind charge pull").color(NamedTextColor.WHITE))
                 .appendNewline()
+                .append(Component.text("🗿 Stone - Resistance 1, 1% Resistance 5 on hit, Stone Core drop").color(NamedTextColor.GRAY))
+                .appendNewline()
                 .append(Component.text("═══════════════════════════").color(NamedTextColor.DARK_GRAY))
                 .appendNewline()
                 .append(Component.text("Use /element <element> to see detailed info!").color(NamedTextColor.YELLOW));
@@ -463,10 +607,10 @@ public class ElementManager {
     }
 
     public void setPlayerElement(Player player, String element) {
-        playerElements.put(player.getUniqueId(), element); {
+        if (isValidElement(element)) {
             playerElements.put(player.getUniqueId(), element.toUpperCase());
             saveElementData();
-            // FIXED: Simple message without mace abilities spam
+            // Simple message without mace abilities spam
             player.sendMessage(Component.text("⚡ Your element has been set to ")
                     .color(NamedTextColor.GOLD)
                     .append(Component.text(getElementDisplayName(element.toUpperCase()))
