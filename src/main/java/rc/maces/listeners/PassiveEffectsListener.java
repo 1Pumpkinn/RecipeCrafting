@@ -57,11 +57,6 @@ public class PassiveEffectsListener extends BukkitRunnable {
             if (hasAirMace || "AIR".equals(playerElement)) {
                 applyAirMacePassives(player, hasAirMace);
             }
-
-            // Stone element passives
-            if ("STONE".equals(playerElement)) {
-                applyStonePassives(player);
-            }
         }
     }
 
@@ -113,13 +108,5 @@ public class PassiveEffectsListener extends BukkitRunnable {
         if (holdingMace || "AIR".equals(elementManager.getPlayerElement(player))) {
             player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 40, 0, false, false));
         }
-    }
-
-    /**
-     * Stone element passives - Permanent Resistance 1
-     */
-    private void applyStonePassives(Player player) {
-        // Permanent Resistance 1
-        player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 40, 0, false, false));
     }
 }
